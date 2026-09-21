@@ -1,0 +1,35 @@
+{
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "electron/**/*.ts",
+    "vite.config.ts",
+    "vite-electron.config.ts"
+  ],
+  "exclude": [
+    "build",
+    "dist",
+    "node_modules",
+    "projects"
+  ],
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "types": ["@remix-run/node", "vite/client", "node"],
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "target": "ES2022",
+    "strict": true,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./app/*"]
+    },
+    "noEmit": true
+  }
+}

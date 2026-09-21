@@ -1,0 +1,11 @@
+node_modules
+.env
+.env.local
+build
+public/build
+.cache
+dist
+.DS_Store
+*.log
+projects/*
+!projects/.gitkeep

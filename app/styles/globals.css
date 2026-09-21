@@ -1,0 +1,117 @@
+@import '@xterm/xterm/css/xterm.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #0a0a1a;
+    --bg-surface: #111128;
+    --border-color: #1e1e3a;
+    --accent-emerald: #10b981;
+    --accent-violet: #8b5cf6;
+    --text-primary: #e2e8f0;
+    --text-muted: #64748b;
+  }
+
+  body {
+    @apply bg-[#0a0a1a] text-[#e2e8f0] font-sans antialiased selection:bg-emerald-500/30 selection:text-emerald-200;
+    overflow: hidden;
+  }
+}
+
+/* Custom Aurora Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 10, 26, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e1e3a;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2e2e5c;
+}
+
+/* Utility to hide scrollbars while maintaining scroll functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(17, 17, 40, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(30, 30, 58, 0.8);
+}
+
+.glass-card:hover {
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
+}
+
+/* Aurora Glow effects */
+.glow-emerald {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+}
+
+.glow-violet {
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.35);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Terminal High-Visibility Infinite Scrollbar ── */
+.xterm {
+  height: 100%;
+  padding-bottom: 6px;
+}
+
+.xterm .xterm-viewport {
+  overflow-y: scroll !important;
+  scrollbar-width: thin;
+  scrollbar-color: #3b3b6d rgba(10, 10, 26, 0.85);
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar {
+  width: 9px !important;
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar-track {
+  background: rgba(10, 10, 26, 0.85) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar-thumb {
+  background: #2d2d58 !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: #10b981 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4) !important;
+}
+
