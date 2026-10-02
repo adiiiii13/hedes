@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useStore } from '@nanostores/react';
 import {
   apiKeys,
+  activeProvider,
+  activeModel,
   customProviders,
   customSystemPrompt,
   setApiKey,
@@ -15,11 +17,15 @@ import {
   DEFAULT_OLLAMA_URL,
 } from '~/stores/settings';
 import { GlowButton } from '~/components/ui/GlowButton';
+import { normalizeCustomBaseUrl } from '~/utils/custom-models';
 import { Check, Cpu, ExternalLink, HardDrive, Key, Loader2, MessageSquare, Plus, RefreshCw, RotateCcw, Save, Server, Trash2, Zap } from 'lucide-react';
 
 export const LLMConfigurator: React.FC = () => {
   const keys = useStore(apiKeys);
   const customs = useStore(customProviders);
+  const selectedProvider = useStore(activeProvider);
+  const selectedModel = useStore(activeModel);
+  const [doctor, setDoctor] = useState<{ loading: boolean; ok?: boolean; message?: string; latencyMs?: number }>({ loading: false });
   const savedSystemPrompt = useStore(customSystemPrompt);
 
   // Local system prompt state for the textarea
@@ -37,6 +43,65 @@ export const LLMConfigurator: React.FC = () => {
   const [apiKey, setCustomApiKey] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
+  const [scannedModels, setScannedModels] = useState<Array<{ id: string; label: string }>>([]);
+  const scanVersion = React.useRef(0);
+  const scanInitialized = React.useRef(false);
+
+  const scanCustomModels = async (): Promise<{ baseUrl: string; models: Array<{ id: string; label: string }> } | null> => {
+    let normalizedUrl: string;
+    try {
+      normalizedUrl = normalizeCustomBaseUrl(baseUrl);
+    } catch (error) {
+      setScanMessage(error instanceof Error ? error.message : 'Invalid endpoint URL.');
+      return null;
+    }
+    const version = ++scanVersion.current;
+    setIsScanning(true);
+    setScanMessage('Scanning models...');
+    try {
+      const response = await fetch('/api/custom-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseUrl: normalizedUrl, apiKey: apiKey.trim() }),
+      });
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.error || 'Could not scan models.');
+      if (version === scanVersion.current) {
+        setScannedModels(data.models);
+        setModelId((current) => current || data.models[0].id);
+        setScanMessage(`${data.models.length} model${data.models.length === 1 ? '' : 's'} found. Select one below or enter an ID.`);
+      }
+      return { baseUrl: data.baseUrl, models: data.models };
+    } catch (error) {
+      if (version === scanVersion.current) {
+        setScannedModels([]);
+        setScanMessage(`${error instanceof Error ? error.message : 'Scan failed.'} Manual model ID is available.`);
+      }
+      return null;
+    } finally {
+      if (version === scanVersion.current) setIsScanning(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!scanInitialized.current) {
+      scanInitialized.current = true;
+      return;
+    }
+    scanVersion.current += 1;
+    setScannedModels([]);
+    if (scannedModels.some((model) => model.id === modelId)) setModelId('');
+    setScanMessage(null);
+    try {
+      normalizeCustomBaseUrl(baseUrl);
+    } catch {
+      return;
+    }
+    const timer = window.setTimeout(() => { void scanCustomModels(); }, 900);
+    return () => window.clearTimeout(timer);
+  }, [baseUrl, apiKey]);
 
   // Local state for API keys to implement Save button behavior
   const [localKeys, setLocalKeys] = useState<Record<string, string>>({});
@@ -107,23 +172,34 @@ export const LLMConfigurator: React.FC = () => {
 
   const handleAddCustom = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !baseUrl.trim() || !modelId.trim()) return;
+    if (!name.trim() || !baseUrl.trim()) return;
 
     setIsTesting(true);
-    setStatusMessage('Validating and adding custom model...');
+    setStatusMessage('Adding custom model...');
 
     try {
-      await addCustomProvider({
+      const normalizedUrl = normalizeCustomBaseUrl(baseUrl);
+      const scan = !modelId.trim() && scannedModels.length === 0 ? await scanCustomModels() : null;
+      const selectedModel = modelId.trim() || scan?.models[0]?.id || scannedModels[0]?.id;
+      if (!selectedModel) {
+        setStatusMessage('Enter a model ID manually, or connect an endpoint that lists models.');
+        return;
+      }
+      const detectedModels = (scan?.models || scannedModels).map((model) => model.id);
+      const saved = await addCustomProvider({
         name: name.trim(),
-        baseUrl: baseUrl.trim(),
-        modelId: modelId.trim(),
+        baseUrl: normalizedUrl,
+        modelId: selectedModel,
+        detectedModels: [...new Set([selectedModel, ...detectedModels])],
         apiKey: apiKey.trim() || undefined,
         enabled: true,
       });
 
-      setStatusMessage('Custom model added successfully!');
+      setActiveModelAndProvider(saved.id, selectedModel);
+      setStatusMessage(`Custom model ${selectedModel} added and selected.`);
       setName('');
       setModelId('');
+      setScannedModels([]);
       setCustomApiKey('');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
@@ -179,6 +255,22 @@ export const LLMConfigurator: React.FC = () => {
           message: err.message,
         },
       }));
+    }
+  };
+
+  const runModelDoctor = async () => {
+    setDoctor({ loading: true });
+    try {
+      const custom = customs.find((item) => item.id === selectedProvider);
+      const response = await fetch('/api/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: selectedProvider, model: selectedModel, apiKey: custom?.apiKey || keys[selectedProvider], baseUrl: activeOllamaUrl, customProviders: customs }),
+      });
+      const data = await response.json();
+      setDoctor({ loading: false, ok: Boolean(data.ok), message: data.error || data.message || 'No result', latencyMs: data.latencyMs });
+    } catch (error) {
+      setDoctor({ loading: false, ok: false, message: (error as Error).message });
     }
   };
 
@@ -243,6 +335,10 @@ export const LLMConfigurator: React.FC = () => {
 
   return (
     <div className="space-y-6 text-xs text-slate-300">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4">
+        <div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-white">Model Doctor</h3><p className="mt-1 text-[11px] text-slate-400">Selected: {selectedProvider} / {selectedModel}. Checks connection and a short answer. Local Ollama check currently tests model discovery.</p>{doctor.message && <p role="status" className={`mt-2 text-xs ${doctor.ok ? 'text-emerald-300' : 'text-rose-300'}`}>{doctor.message}{doctor.latencyMs ? ` (${doctor.latencyMs} ms)` : ''}</p>}</div>
+        <button type="button" onClick={() => void runModelDoctor()} disabled={doctor.loading} className="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-xs font-medium text-cyan-200 hover:bg-cyan-400/20 disabled:opacity-50">{doctor.loading ? 'Checking…' : 'Run diagnostic'}</button>
+      </div>
       {/* Built-in API Keys Section */}
       <div className="p-4 rounded-2xl bg-[#0e0e24] border border-[#1e1e3a]">
         <div className="flex items-center justify-between mb-3">
@@ -436,14 +532,13 @@ export const LLMConfigurator: React.FC = () => {
             </div>
             <div>
               <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                Model Identifier
+                Model Identifier (Optional)
               </label>
               <input
                 type="text"
-                placeholder="e.g. deepseek-r1:14b or llama3"
+                placeholder="Auto detected, or enter manually"
                 value={modelId}
                 onChange={(e) => setModelId(e.target.value)}
-                required
                 className="w-full px-3 py-2 rounded-xl bg-black/40 border border-[#1e1e3a] focus:border-emerald-500/50 outline-none text-white text-xs"
               />
             </div>
@@ -476,6 +571,22 @@ export const LLMConfigurator: React.FC = () => {
               />
             </div>
           </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => { void scanCustomModels(); }} disabled={isScanning || !baseUrl.trim()} className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50">
+              {isScanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Scan models
+            </button>
+            <span aria-live="polite" className="text-[11px] text-slate-400">{scanMessage || 'Models scan automatically after you enter the endpoint and key.'}</span>
+          </div>
+          {scannedModels.length > 0 && (
+            <label className="block text-[11px] font-medium text-slate-400">
+              Available models ({scannedModels.length})
+              <select value={scannedModels.some((model) => model.id === modelId) ? modelId : ''} onChange={(event) => setModelId(event.target.value)} className="mt-1 w-full rounded-xl border border-[#1e1e3a] bg-[#151532] px-3 py-2 text-xs text-white outline-none focus:border-emerald-500/50">
+                <option value="">Use manual model ID above</option>
+                {scannedModels.map((model) => <option key={model.id} value={model.id}>{model.label}</option>)}
+              </select>
+            </label>
+          )}
 
           <div className="flex items-center justify-between pt-2">
             {statusMessage && (

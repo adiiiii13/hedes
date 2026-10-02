@@ -1,4 +1,4 @@
-import { json, type LoaderFunctionArgs } from '@remix-run/node';
+import { data as json, type LoaderFunctionArgs } from 'react-router';
 import { providerRegistry } from '~/llm/registry';
 
 export async function loader({ request }: LoaderFunctionArgs) {

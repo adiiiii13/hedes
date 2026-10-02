@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@nanostores/react';
 import { useChatHistory } from '~/persistence/useChatHistory';
-import { loadMessagesIntoStore, currentChatId, persistCurrentChat } from '~/stores/chat';
+import { loadMessagesIntoStore, currentChatId, persistCurrentChat, projectRevision } from '~/stores/chat';
 import { loadProjectFiles, files, activeFile, previewUrl, workspaceViewMode } from '~/stores/workspace';
 import {
   councilSessionsStore,
@@ -39,6 +39,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({ isOpen, onClose })
     }
 
     currentChatId.set(chat.id);
+    projectRevision.set(chat.revision || 1);
     localStorage.setItem('hedes_current_chat', chat.id);
     files.set({});
     activeFile.set(null);

@@ -1,5 +1,5 @@
-import React, { memo } from 'react';
-import { Bot, Cpu } from 'lucide-react';
+import React, { memo, useState } from 'react';
+import { Bot, Cpu, Copy, Check } from 'lucide-react';
 import { Markdown } from './Markdown';
 import { Artifact } from './Artifact';
 import { useStore } from '@nanostores/react';
@@ -11,6 +11,7 @@ interface AssistantMessageProps {
 }
 
 export const AssistantMessage = memo(({ message, isLast = false }: AssistantMessageProps) => {
+  const [copied, setCopied] = useState(false);
   const generating = useStore(isGenerating);
   const artifacts = useStore(artifactsStore);
   const isStreaming = isLast && generating;
@@ -51,6 +52,11 @@ export const AssistantMessage = memo(({ message, isLast = false }: AssistantMess
 
   const cleanBefore = stripDivs(beforeText);
   const cleanAfter = stripDivs(afterText);
+  const copy = async () => {
+    await navigator.clipboard.writeText([cleanBefore, cleanAfter].filter(Boolean).join('\n\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
 
   return (
     <div className="flex flex-col gap-2 w-full py-3 group">
@@ -69,6 +75,7 @@ export const AssistantMessage = memo(({ message, isLast = false }: AssistantMess
             <span className="text-[10px] font-mono text-emerald-400/80">Active</span>
           </div>
         )}
+        {!isStreaming && (cleanBefore || cleanAfter) && <button type="button" onClick={() => { void copy(); }} className="ml-auto rounded-md p-1 text-slate-500 opacity-0 transition hover:bg-white/10 hover:text-cyan-200 focus:opacity-100 group-hover:opacity-100" title="Copy reply" aria-label="Copy reply">{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</button>}
       </div>
 
       {/* Message Body */}

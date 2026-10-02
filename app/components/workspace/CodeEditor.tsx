@@ -114,9 +114,9 @@ export const CodeEditor: React.FC = () => {
   const linesCount = fileContent.split('\n').length;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#0d0d1f]">
+    <div className="flex-1 flex flex-col h-full overflow-hidden app-surface">
       {/* Tab Header with File Name, Line Count, and Breadcrumbs */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e3a] bg-[#0a0a1a] text-xs select-none">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e3a] app-background text-xs select-none">
         <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#151532] border border-[#2e2e5c] text-emerald-300 font-mono">
           <FileCode className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           <span className="font-medium truncate">{currentFile}</span>

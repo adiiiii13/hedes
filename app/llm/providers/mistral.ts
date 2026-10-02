@@ -1,5 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import type { LanguageModelV1 } from 'ai';
+import type { LanguageModel } from 'ai';
 import type { LLMAdapter, LLMProviderOptions } from '../adapter';
 import type { ModelInfo } from '~/types/model';
 
@@ -33,12 +33,12 @@ export class MistralAdapter implements LLMAdapter {
     ];
   }
 
-  getModel(modelId: string, options?: LLMProviderOptions): LanguageModelV1 {
+  getModel(modelId: string, options?: LLMProviderOptions): LanguageModel {
     const apiKey = options?.apiKey || process.env.MISTRAL_API_KEY;
     const client = createOpenAI({
       apiKey,
       baseURL: options?.baseUrl || this.defaultBaseUrl,
     });
-    return client(modelId);
+    return client.chat(modelId);
   }
 }

@@ -1,0 +1,33 @@
+name: Release checks
+on:
+  workflow_dispatch:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.19.0'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level low
+      - run: npm run verify:release
+      - run: npm run electron:build:renderer
+      - run: npm run electron:build:deps
+      - run: pnpm exec electron-builder --win --dir --publish never
+      - run: node scripts/p0-desktop-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-release-evidence
+          path: |
+            output/p0-desktop-results.json
+            output/playwright/p0-desktop.png
+          retention-days: 7

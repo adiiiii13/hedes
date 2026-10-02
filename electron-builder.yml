@@ -1,5 +1,6 @@
 appId: in.bubblesort.hedes
 productName: Hedes Studio
+electronVersion: 33.4.11
 directories:
   buildResources: build
   output: dist
@@ -8,6 +9,8 @@ files:
   - package.json
   - node_modules/**/*
   - icons/**
+  - plugins/**
+  - mcp/**
   - electron-update.yml
 extraMetadata:
   main: build/electron/main/index.mjs
@@ -18,6 +21,8 @@ asarUnpack:
   - electron-update.yml
   - package.json
   - node_modules/**/*
+  - plugins/**
+  - mcp/**
 
 mac:
   icon: assets/icons/icon.icns
@@ -51,6 +56,8 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: ${productName}
   artifactName: ${name}-${version}-${os}-${arch}-setup.${ext}
+  deleteAppDataOnUninstall: false
+  uninstallDisplayName: ${productName}
 
 npmRebuild: false
 
@@ -60,6 +67,3 @@ publish:
   repo: hedes
   private: true
   releaseType: release
-
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/

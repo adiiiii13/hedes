@@ -6,18 +6,32 @@ import { LLMConfigurator } from './LLMConfigurator';
 import { PersonificationManager } from './PersonificationManager';
 import { TerminalSettings } from './TerminalSettings';
 import { StorageSettings } from './StorageSettings';
+import { MemorySettings } from './MemorySettings';
+import { McpSettings } from './McpSettings';
+import { SkillSettings } from './SkillSettings';
+import { PluginSettings } from './PluginSettings';
+import { AppearanceSettings } from './AppearanceSettings';
+import { DiagnosticsSettings } from './DiagnosticsSettings';
+import { TasksSettings } from './TasksSettings';
 import {
   Key,
   Settings,
   Users,
   Terminal as TerminalIcon,
   Database,
+  BrainCircuit,
+  PlugZap,
+  BookOpen,
+  Blocks,
+  Palette,
+  Activity,
+  Clock,
   X,
 } from 'lucide-react';
 
 export const SettingsModal: React.FC = () => {
   const isOpen = useStore(isSettingsOpen);
-  const [activeTab, setActiveTab] = useState<'llm' | 'terminal' | 'personas' | 'storage'>('llm');
+  const [activeTab, setActiveTab] = useState<'llm' | 'terminal' | 'personas' | 'storage' | 'memory' | 'mcp' | 'skills' | 'plugins' | 'appearance' | 'diagnostics' | 'tasks'>('llm');
 
   return (
     <AnimatePresence>
@@ -35,22 +49,22 @@ export const SettingsModal: React.FC = () => {
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-[#0c0c20] border border-[#2e2e5c] shadow-2xl flex flex-col overflow-hidden z-10"
+            className="relative w-full max-w-5xl max-h-[92vh] rounded-3xl app-surface border border-white/10 shadow-[0_32px_100px_rgba(0,0,0,0.65)] flex flex-col overflow-hidden z-10"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 px-6 border-b border-[#1e1e3a] bg-[#0a0a1a]">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4 px-6 border-b border-white/10 app-background">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400">
                   <Settings className="w-4 h-4" />
                 </div>
                 <div>
                   <h2 className="text-sm font-bold text-white">Hedes Studio Settings</h2>
-                  <p className="text-[11px] text-slate-400">LLM Providers, Terminal Engine, 100-Archetype Hive Mind & Storage</p>
+                  <p className="text-[11px] text-slate-400">Providers, memory, tools, and workspace</p>
                 </div>
               </div>
 
               {/* Navigation Tabs Switcher */}
-              <div className="flex items-center gap-1 p-1 bg-black/40 border border-white/5 rounded-2xl overflow-x-auto modern-scrollbar">
+              <div className="order-3 flex w-full items-center gap-1 p-1 bg-black/40 border border-white/5 rounded-2xl overflow-x-auto modern-scrollbar">
                 <button
                   type="button"
                   onClick={() => setActiveTab('llm')}
@@ -105,6 +119,13 @@ export const SettingsModal: React.FC = () => {
                   <Database className="w-3.5 h-3.5" />
                   <span>Storage & Disk</span>
                 </button>
+                <button type="button" onClick={() => setActiveTab('memory')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'memory' ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><BrainCircuit className="w-3.5 h-3.5" /><span>Memory</span></button>
+                <button type="button" onClick={() => setActiveTab('mcp')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'mcp' ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><PlugZap className="w-3.5 h-3.5" /><span>MCP</span></button>
+                <button type="button" onClick={() => setActiveTab('skills')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'skills' ? 'bg-violet-600/30 text-violet-200 border border-violet-500/40' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><BookOpen className="w-3.5 h-3.5" /><span>Skills</span></button>
+                <button type="button" onClick={() => setActiveTab('plugins')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'plugins' ? 'bg-fuchsia-600/30 text-fuchsia-200 border border-fuchsia-500/40' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><Blocks className="w-3.5 h-3.5" /><span>Plugins</span></button>
+                <button type="button" onClick={() => setActiveTab('appearance')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'appearance' ? 'bg-white/10 text-[var(--app-accent)] border border-white/20' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><Palette className="w-3.5 h-3.5" /><span>Appearance</span></button>
+                <button type="button" onClick={() => setActiveTab('diagnostics')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'diagnostics' ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><Activity className="w-3.5 h-3.5" /><span>Diagnostics</span></button>
+                <button type="button" onClick={() => setActiveTab('tasks')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'tasks' ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><Clock className="w-3.5 h-3.5" /><span>Scheduled Tasks</span></button>
               </div>
 
               <button
@@ -122,6 +143,13 @@ export const SettingsModal: React.FC = () => {
               {activeTab === 'terminal' && <TerminalSettings />}
               {activeTab === 'personas' && <PersonificationManager />}
               {activeTab === 'storage' && <StorageSettings />}
+              {activeTab === 'memory' && <MemorySettings />}
+              {activeTab === 'mcp' && <McpSettings />}
+              {activeTab === 'skills' && <SkillSettings />}
+              {activeTab === 'plugins' && <PluginSettings />}
+              {activeTab === 'appearance' && <AppearanceSettings />}
+              {activeTab === 'diagnostics' && <DiagnosticsSettings />}
+              {activeTab === 'tasks' && <TasksSettings />}
             </div>
           </motion.div>
         </div>

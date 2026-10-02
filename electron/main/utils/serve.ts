@@ -1,5 +1,5 @@
-import { createReadableStreamFromReadable } from '@remix-run/node';
-import type { ServerBuild } from '@remix-run/node';
+import { createReadableStreamFromReadable } from '@react-router/node';
+import type { ServerBuild } from 'react-router';
 import mime from 'mime';
 import { createReadStream, promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -11,14 +11,6 @@ export async function loadServerBuild(): Promise<any> {
   if (isDev) {
     console.log('Dev mode: server build not loaded');
     return;
-  }
-
-  // Ensure browser globals expected by UMD packages (e.g. @xterm/addon-fit) exist in Node
-  if (typeof (globalThis as any).self === 'undefined') {
-    (globalThis as any).self = globalThis;
-  }
-  if (typeof (globalThis as any).window === 'undefined') {
-    (globalThis as any).window = globalThis;
   }
 
   const appPath = app.getAppPath();

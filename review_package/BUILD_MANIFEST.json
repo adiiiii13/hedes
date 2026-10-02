@@ -1,0 +1,44 @@
+{
+  "application": "Hedes Studio",
+  "version": "1.0.0",
+  "appId": "in.bubblesort.hedes",
+  "timestamp": "2026-10-01T20:34:00+05:30",
+  "gitHead": "3212c6ddf0ba41b3dfd1f505ce278fa0d1368172",
+  "environment": {
+    "node": "v24.14.1",
+    "npm": "11.11.0",
+    "electron": "33.4.11",
+    "platform": "win32",
+    "arch": "x64",
+    "os": "Windows 11 (Build 26200)"
+  },
+  "artifacts": {
+    "installer": {
+      "file": "dist/hedes-studio-1.0.0-win-x64-setup.exe",
+      "sizeBytes": 110997984,
+      "sha256": "0FD57A2CE2B6D09AF22F603C503D7EEA6CD32215BD290F379CE4907361B5D099",
+      "format": "NSIS Setup Executable"
+    },
+    "executable": {
+      "file": "dist/win-unpacked/Hedes Studio.exe",
+      "installedPath": "C:/Users/adity/AppData/Local/Programs/Hedes Studio/Hedes Studio.exe",
+      "sizeBytes": 188919296,
+      "sha256": "64CCB6D15F18C9E60365305D1EE934575763F7F7D132C8DF06B78152C5AAC73A"
+    },
+    "desktopShortcut": {
+      "path": "C:/Users/adity/OneDrive/Desktop/Hedes Studio.lnk",
+      "target": "C:/Users/adity/AppData/Local/Programs/Hedes Studio/Hedes Studio.exe"
+    }
+  },
+  "signingStatus": {
+    "status": "UNSIGNED",
+    "classification": "Private Beta / Local Developer Verification",
+    "blocker": "Public production trusted code-signing certificate (Authenticode) absent. Mandatory prerequisite before public production distribution."
+  },
+  "dataSchema": {
+    "backupVersion": "2.0",
+    "runSchemaVersion": "1.0",
+    "memorySchemaVersion": "2.0",
+    "taskQueueSchemaVersion": "1.0"
+  }
+}

@@ -36,29 +36,62 @@ export const StorageSettings: React.FC = () => {
     }
   }, []);
 
-  const handleExportAll = () => {
-    if (typeof window === 'undefined') return;
+  const [isExporting, setIsExporting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
 
-    const exportData = {
-      version: '1.0',
-      exportedAt: new Date().toISOString(),
-      councilSessions: councilSessionsStore.get(),
-      customProviders: customProviders.get(),
-      userProfile: localStorage.getItem('hedes_user_profile')
-        ? JSON.parse(localStorage.getItem('hedes_user_profile')!)
-        : null,
-      apiKeys: localStorage.getItem('hedes_api_keys')
-        ? JSON.parse(localStorage.getItem('hedes_api_keys')!)
-        : null,
-    };
+  const handleExportZip = async () => {
+    try {
+      setIsExporting(true);
+      const res = await fetch('/api/local/backup');
+      if (!res.ok) throw new Error('Backup creation failed: ' + (await res.text()));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hedes-full-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Backup failed');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `hedes-studio-full-backup-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleRestoreZip = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.zip')) {
+      alert('Please select a valid .zip backup archive.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to restore data from "${file.name}"? Existing files will be updated with archive content.`)) {
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      setIsRestoring(true);
+      setRestoreMessage(null);
+      const arrayBuffer = await file.arrayBuffer();
+      const res = await fetch('/api/local/backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: arrayBuffer,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Restore failed');
+      setRestoreMessage(`Successfully restored ${data.restoredCount} files from backup.`);
+      setTimeout(() => setRestoreMessage(null), 5000);
+    } catch (err: any) {
+      alert(err.message || 'Restore failed');
+    } finally {
+      setIsRestoring(false);
+      e.target.value = '';
+    }
   };
 
   const handleClearCache = () => {
@@ -126,20 +159,43 @@ export const StorageSettings: React.FC = () => {
 
       {/* Backup & Export Section */}
       <div className="p-4 rounded-2xl bg-[#0e0e24] border border-[#1e1e3a]">
-        <h3 className="font-bold text-sm text-white mb-2">Backup & Data Migration</h3>
-        <p className="text-slate-400 mb-4 text-[11px] leading-relaxed">
-          Create an offline snapshot containing all your personification edits, 100-council transcripts, custom models, and profile configurations.
+        <h3 className="font-bold text-sm text-white mb-2">Full Backup & Data Migration</h3>
+        <p className="text-slate-400 mb-3 text-[11px] leading-relaxed">
+          Create an authoritative offline ZIP snapshot containing all your project files, chat history, memories, skills, and 100-council transcripts.
         </p>
+        <div className="p-2.5 mb-4 rounded-xl bg-black/40 border border-white/5 text-[10px] text-slate-400">
+          <span className="text-amber-400 font-semibold">Exclusion Policy:</span> API keys, vault encryption files, and raw credentials are systematically excluded from backup archives to prevent secret leakage.
+        </div>
 
-        <div className="flex items-center gap-3">
+        {restoreMessage && (
+          <div className="p-2.5 mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+            <Check className="w-4 h-4 shrink-0" />
+            <span>{restoreMessage}</span>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={handleExportAll}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-medium text-xs flex items-center gap-2 shadow-lg shadow-cyan-600/20 transition-all cursor-pointer"
+            onClick={handleExportZip}
+            disabled={isExporting}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-medium text-xs flex items-center gap-2 shadow-lg shadow-cyan-600/20 transition-all cursor-pointer disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export Full Studio Backup (JSON)</span>
+            <span>{isExporting ? 'Generating ZIP...' : 'Export Full Backup (ZIP)'}</span>
           </button>
+
+          <label className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 text-slate-200 font-medium text-xs flex items-center gap-2 transition-colors cursor-pointer">
+            <Upload className="w-3.5 h-3.5 text-cyan-400" />
+            <span>{isRestoring ? 'Restoring Archive...' : 'Restore from Backup (ZIP)'}</span>
+            <input
+              type="file"
+              accept=".zip"
+              onChange={handleRestoreZip}
+              disabled={isRestoring}
+              className="hidden"
+            />
+          </label>
         </div>
       </div>
 

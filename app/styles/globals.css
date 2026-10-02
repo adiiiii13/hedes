@@ -6,19 +6,100 @@
 
 @layer base {
   :root {
-    --bg-primary: #0a0a1a;
-    --bg-surface: #111128;
-    --border-color: #1e1e3a;
+    --app-bg: #080d1b;
+    --app-surface: #10172a;
+    --app-accent: #22d3ee;
+    --app-text: #f1f5f9;
+    --app-muted: #94a3b8;
+    --app-border: #334155;
+    --app-bg-layer: var(--app-bg);
+    --app-surface-layer: var(--app-surface);
+    --app-wallpaper: none;
+    --app-wallpaper-dim: .45;
+    --app-panel-opacity: 45%;
+    --app-font-size: 16px;
+    --bg-primary: #080d1b;
+    --bg-surface: #10172a;
+    --border-color: #243047;
     --accent-emerald: #10b981;
     --accent-violet: #8b5cf6;
-    --text-primary: #e2e8f0;
-    --text-muted: #64748b;
+    --text-primary: #f1f5f9;
+    --text-muted: #94a3b8;
   }
 
   body {
-    @apply bg-[#0a0a1a] text-[#e2e8f0] font-sans antialiased selection:bg-emerald-500/30 selection:text-emerald-200;
+    @apply font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-100;
+    background-color: var(--app-bg);
+    color: var(--app-text);
+    font-feature-settings: 'cv11', 'ss01';
     overflow: hidden;
   }
+}
+
+html[data-wallpaper='on'] {
+  --app-bg-layer: color-mix(in srgb, var(--app-bg) 12%, transparent);
+  --app-surface-layer: color-mix(in srgb, var(--app-surface) var(--app-panel-opacity), transparent);
+}
+html[data-wallpaper='on'] body {
+  background-image: linear-gradient(rgba(0, 0, 0, var(--app-wallpaper-dim)), rgba(0, 0, 0, var(--app-wallpaper-dim))), var(--app-wallpaper);
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+html[data-wallpaper='on'] .app-input-card,
+html[data-wallpaper='on'] .app-terminal-toolbar,
+html[data-wallpaper='on'] .app-terminal-input,
+html[data-wallpaper='on'] .app-attachment-strip {
+  background-color: color-mix(in srgb, var(--app-bg) var(--app-panel-opacity), transparent);
+  backdrop-filter: blur(8px);
+}
+
+html[data-wallpaper='on'] .app-terminal-canvas,
+html[data-wallpaper='on'] .app-terminal-canvas .xterm,
+html[data-wallpaper='on'] .app-terminal-canvas .xterm-viewport,
+html[data-wallpaper='on'] .app-terminal-canvas .xterm-screen {
+  background: transparent !important;
+}
+
+html { font-size: var(--app-font-size); }
+html[data-appearance-font='inter'] body { font-family: Inter, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif; }
+html[data-appearance-font='system'] body { font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif; }
+html[data-appearance-font='mono'] body { font-family: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace; }
+html[data-appearance-font] .font-sans { font-family: inherit; }
+html[data-appearance-font] .text-white,
+html[data-appearance-font] .text-slate-100,
+html[data-appearance-font] .text-slate-200 { color: var(--app-text); }
+html[data-appearance-font] .text-cyan-200,
+html[data-appearance-font] .text-cyan-300,
+html[data-appearance-font] .text-cyan-400 { color: var(--app-accent); }
+html[data-appearance-font] .text-slate-400 { color: var(--app-muted); }
+
+.app-background { background-color: var(--app-bg-layer); }
+.app-surface { background-color: var(--app-surface-layer); }
+.app-accent { color: var(--app-accent); }
+.app-border { border-color: var(--app-border); }
+.app-chat-background { background: linear-gradient(180deg, var(--app-surface-layer), var(--app-bg-layer)); }
+
+.app-titlebar { app-region: drag; -webkit-app-region: drag; user-select: none; }
+.app-titlebar button { app-region: no-drag; -webkit-app-region: no-drag; }
+html[data-desktop='on'] .app-titlebar { display: flex; }
+@media (max-width: 767px) {
+  .app-mobile-chat, .app-explorer-panel { width: 100% !important; min-width: 0 !important; max-width: none !important; }
+}
+
+/* Tailwind's pixel-sized labels need to follow the app typography slider too. */
+html[data-appearance-font] .text-\[9px\] { font-size: calc(9px * var(--app-font-size) / 16px); }
+html[data-appearance-font] .text-\[10px\] { font-size: calc(10px * var(--app-font-size) / 16px); }
+html[data-appearance-font] .text-\[11px\] { font-size: calc(11px * var(--app-font-size) / 16px); }
+
+button, input, textarea, select {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 2px;
 }
 
 /* Custom Aurora Scrollbar */
@@ -32,12 +113,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e1e3a;
+  background: #2b3650;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2e2e5c;
+  background: #455875;
 }
 
 /* Utility to hide scrollbars while maintaining scroll functionality */

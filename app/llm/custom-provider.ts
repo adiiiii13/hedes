@@ -1,5 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import type { LanguageModelV1 } from 'ai';
+import type { LanguageModel } from 'ai';
 import type { LLMAdapter, LLMProviderOptions } from './adapter';
 import type { CustomProviderConfig, ModelInfo } from '~/types/model';
 
@@ -9,6 +9,7 @@ export class CustomProviderAdapter implements LLMAdapter {
   readonly icon = 'Cpu';
   readonly baseUrl: string;
   readonly modelId: string;
+  readonly detectedModels: string[];
   readonly apiKey?: string;
 
   constructor(config: CustomProviderConfig) {
@@ -16,18 +17,17 @@ export class CustomProviderAdapter implements LLMAdapter {
     this.name = config.name;
     this.baseUrl = config.baseUrl;
     this.modelId = config.modelId;
+    this.detectedModels = config.detectedModels?.length ? config.detectedModels : [config.modelId];
     this.apiKey = config.apiKey;
   }
 
   getStaticModels(): ModelInfo[] {
-    return [
-      {
-        name: this.modelId,
-        label: `${this.name} (${this.modelId})`,
-        provider: this.id,
-        isCustom: true,
-      },
-    ];
+    return this.detectedModels.map((id) => ({
+      name: id,
+      label: `${this.name} (${id})`,
+      provider: this.id,
+      isCustom: true,
+    }));
   }
 
   async fetchDynamicModels(): Promise<ModelInfo[]> {
@@ -52,12 +52,12 @@ export class CustomProviderAdapter implements LLMAdapter {
     }
   }
 
-  getModel(modelId?: string, options?: LLMProviderOptions): LanguageModelV1 {
+  getModel(modelId?: string, options?: LLMProviderOptions): LanguageModel {
     const targetModel = modelId || this.modelId;
     const client = createOpenAI({
-      baseURL: options?.baseUrl || this.baseUrl,
-      apiKey: options?.apiKey || this.apiKey || 'custom-key',
+      baseURL: this.baseUrl,
+      apiKey: this.apiKey || options?.apiKey || 'custom-key',
     });
-    return client(targetModel);
+    return client.chat(targetModel);
   }
 }

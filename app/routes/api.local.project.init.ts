@@ -1,8 +1,8 @@
-import { type ActionFunctionArgs } from '@remix-run/node';
+import { data as json, type ActionFunctionArgs } from 'react-router';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { exec } from 'node:child_process';
 import { resolveProjectDir } from '~/utils/project-dir.server';
+import { rejectCrossOrigin } from '~/utils/local-request.server';
 
 const STARTER_FILES: Record<string, string> = {
   'package.json': JSON.stringify(
@@ -174,20 +174,9 @@ body {
 `,
 };
 
-function killPort5173() {
-  try {
-    if (process.platform === 'win32') {
-      exec(
-        'powershell -NoProfile -NonInteractive -Command "Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"',
-        () => {}
-      );
-    } else {
-      exec('fuser -k 5173/tcp', () => {});
-    }
-  } catch {}
-}
-
 export async function action({ request }: ActionFunctionArgs) {
+  const crossOrigin = rejectCrossOrigin(request);
+  if (crossOrigin) return crossOrigin;
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
@@ -198,6 +187,10 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const { projectDir, resolvedChatId } = await resolveProjectDir(requestedId);
 
+    if ((await fs.readdir(projectDir)).length > 0) {
+      return json({ error: 'Project already contains files' }, { status: 409 });
+    }
+
     // Write all starter files to the project directory
     for (const [relPath, content] of Object.entries(STARTER_FILES)) {
       const fullPath = path.join(projectDir, relPath);
@@ -205,9 +198,6 @@ export async function action({ request }: ActionFunctionArgs) {
       await fs.mkdir(dir, { recursive: true });
       await fs.writeFile(fullPath, content, 'utf-8');
     }
-
-    // Kill any lingering server on port 5173 so preview is cleanly reset
-    killPort5173();
 
     return new Response(
       JSON.stringify({

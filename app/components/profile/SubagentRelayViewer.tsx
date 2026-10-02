@@ -8,11 +8,8 @@ import {
 } from '~/engine/subagent-relay';
 import { userProfileStore } from '~/stores/profile';
 import { humanPersonasStore } from '~/stores/hive';
-import { activeModel, activeProvider, apiKeys } from '~/stores/settings';
+import { activeModel, activeProvider, apiKeys, customProviders, ollamaBaseUrl } from '~/stores/settings';
 import {
-  Play,
-  Pause,
-  FastForward,
   RotateCcw,
   CheckCircle2,
   Sparkles,
@@ -52,6 +49,8 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
   const model = useStore(activeModel);
   const provider = useStore(activeProvider);
   const keys = useStore(apiKeys);
+  const customs = useStore(customProviders);
+  const localModelUrl = useStore(ollamaBaseUrl);
 
   const [relayState, setRelayState] = useState<RelayProgressState>(() => {
     if (savedConsensus) {
@@ -80,7 +79,6 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
     };
   });
 
-  const [speedMs, setSpeedMs] = useState<number>(140);
   const [selectedAgentDetail, setSelectedAgentDetail] = useState<RelayAgentStep | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
@@ -115,10 +113,11 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
       userPrompt: prompt,
       userProfile: profile,
       customPersonas: personas,
-      speedMs,
       model,
       provider,
       apiKey: keys[provider],
+      customProviders: customs,
+      ollamaBaseUrl: localModelUrl,
       onUpdate: (state) => {
         setRelayState(state);
       },
@@ -135,6 +134,9 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
       })
       .catch((err) => {
         console.error('Relay error:', err);
+        if ((err as Error).name !== 'AbortError' && (err as Error).message !== 'Relay cancelled') {
+          setRelayState((state) => ({ ...state, isActive: false, error: (err as Error).message }));
+        }
       });
 
     return () => {
@@ -149,26 +151,10 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
     }
   }, [relayState.history.length, runIteration]);
 
-  const handlePauseResume = () => {
-    if (!engineRef.current) return;
-    if (relayState.isPaused) {
-      engineRef.current.resume();
-    } else {
-      engineRef.current.pause();
-    }
-  };
-
-  const handleFastForward = () => {
-    if (!engineRef.current) return;
-    engineRef.current.fastForward();
-    setSpeedMs(5);
-  };
-
   const handleRestartRelay = () => {
     if (engineRef.current) {
       engineRef.current.cancel();
     }
-    setSpeedMs(140);
     setRunIteration((prev) => prev + 1);
   };
 
@@ -190,9 +176,8 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
           idx === 0
             ? 'User Query'
             : `Sub-Agent #${idx} (${personas[idx - 1]?.name || 'Previous Persona'})`,
-        critique: `Evaluating constraints and lived field criteria from ${targetPersona.archetype} viewpoint.`,
-        amendment: `Proposing structural enhancements matching ${targetPersona.role} standards.`,
-        confidenceScore: 90 + targetPersona.weight,
+        critique: 'Waiting for model response.',
+        amendment: '',
         timestamp: isCompleted ? 'Deliberated in relay' : isCurrent ? 'Active in relay' : 'Pending in queue',
       });
     }
@@ -211,7 +196,7 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
     let md = `# 100-Subagent Council Deliberation & Executive Verdict\n\n`;
     md += `- **Challenge / Objective:** "${prompt}"\n`;
     md += `- **Date:** ${new Date().toLocaleString()}\n`;
-    md += `- **Council Status:** 100 / 100 Human Archetypes Ratified Unanimously\n`;
+    md += `- **Council Status:** ${relayState.finalConsensus.totalAgentsProcessed} / 100 model calls completed\n`;
     md += `- **Deliberation Duration:** ${Math.round(relayState.finalConsensus.totalTimeMs / 1000)}s\n\n---\n\n`;
     md += `## 🏆 Definitive Core Decision\n${relayState.finalConsensus.coreDecision}\n\n`;
     md += `## 📋 Executive Summary\n${relayState.finalConsensus.summary}\n\n`;
@@ -230,7 +215,7 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
       md += `- **Internal Mindset & Worldview:** "${step.persona.prompt}"\n`;
       md += `- **Field Critique & Traps:** ${step.critique}\n`;
       md += `- **Adopted Amendment:** ${step.amendment}\n`;
-      md += `- **Confidence Rating:** ${step.confidenceScore}%\n\n`;
+      md += `- **Status:** ${step.status}\n\n`;
     });
 
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
@@ -266,6 +251,8 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
 
   return (
     <div className="w-full bg-[#0b0c1e] border border-[#23234d] rounded-2xl shadow-2xl overflow-hidden flex flex-col my-4 animate-fadeIn">
+      {relayState.error && <div role="alert" className="flex items-center justify-between gap-3 border-b border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200"><span>Relay stopped: {relayState.error}</span><button type="button" onClick={handleRestartRelay} className="rounded-lg border border-rose-400/40 px-3 py-1">Retry</button></div>}
+      {relayState.warning && <div role="status" className="border-b border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">{relayState.warning}</div>}
       {/* ── Top Header & Progress Bar ───────────────────────────────────────── */}
       <div className="p-4 sm:p-5 bg-gradient-to-r from-[#12122d] via-[#151538] to-[#101026] border-b border-[#22224d]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
@@ -279,40 +266,17 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
                   100-Subagent Sequential Relay & Debate
                 </h3>
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  {isFinished ? 'CONCLUDED (100/100)' : `SUB-AGENT ${relayState.currentAgentIndex + 1} OF 100`}
+                  {isFinished ? `CONCLUDED (${relayState.finalConsensus?.totalAgentsProcessed}/100)` : `SUB-AGENT ${Math.min(relayState.currentAgentIndex + 1, 100)} OF 100`}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Each human archetype analyzes the accumulating proposal, debates constraints, and passes the baton forward.
+                Each AI persona uses the selected model API and examines the previous response.
               </p>
             </div>
           </div>
 
           {/* Controls */}
           <div className="flex items-center gap-2 self-end sm:self-center">
-            {!isFinished && (
-              <>
-                <button
-                  type="button"
-                  onClick={handlePauseResume}
-                  className="px-3 py-1.5 rounded-lg bg-[#1a1a3a] hover:bg-[#252550] text-slate-200 border border-[#2d2d5c] text-xs font-medium flex items-center gap-1.5 transition-colors"
-                >
-                  {relayState.isPaused ? <Play className="w-3.5 h-3.5 text-emerald-400" /> : <Pause className="w-3.5 h-3.5 text-amber-400" />}
-                  <span>{relayState.isPaused ? 'Resume' : 'Pause'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleFastForward}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 text-xs font-medium flex items-center gap-1.5 transition-colors"
-                  title="Fast-forward relay to 100"
-                >
-                  <FastForward className="w-3.5 h-3.5 text-cyan-300" />
-                  <span>Fast Forward</span>
-                </button>
-              </>
-            )}
-
             {isFinished && (
               <>
                 <button
@@ -344,7 +308,7 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
             <span className="text-slate-400 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
               {isFinished
-                ? 'All 100 Personas Unanimously Signed Off'
+                ? `${relayState.finalConsensus?.totalAgentsProcessed} real replies summarized`
                 : `Active: #${currentPersona.id} ${currentPersona.name} (${currentPersona.archetype})`}
             </span>
             <span className="text-cyan-400 font-bold">{relayState.progressPercent}%</span>
@@ -375,7 +339,7 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
 
         <div className="grid grid-cols-10 sm:grid-cols-20 gap-1 sm:gap-1.5 max-h-36 overflow-y-auto p-1 custom-scrollbar">
           {personas.map((p, idx) => {
-            const isCompleted = idx < relayState.currentAgentIndex;
+            const isCompleted = relayState.history.some((step) => step.agentId === p.id && step.status === 'completed');
             const isCurrent = idx === relayState.currentAgentIndex && !isFinished;
             const isPending = idx > relayState.currentAgentIndex;
 
@@ -393,9 +357,8 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
                       persona: p,
                       status: isCurrent ? 'active' : 'pending',
                       inputFromPrevious: idx === 0 ? 'User Query' : `Sub-Agent #${idx} (${personas[idx - 1]?.name || 'Previous Persona'})`,
-                      critique: `Evaluating constraints and lived field criteria from ${p.archetype} viewpoint.`,
-                      amendment: `Proposing structural enhancements matching ${p.role} standards.`,
-                      confidenceScore: 90 + p.weight,
+                      critique: 'Waiting for model response.',
+                      amendment: '',
                       timestamp: isCurrent ? 'Active in relay' : 'Pending in queue',
                     });
                   }
@@ -435,9 +398,8 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
                   currentPersona.id === 1
                     ? 'User Query'
                     : `Sub-Agent #${currentPersona.id - 1} (${personas[currentPersona.id - 2]?.name || 'Previous'})`,
-                critique: `Actively evaluating real-world field constraints for "${prompt}".`,
-                amendment: `Injecting ${currentPersona.role} amendments into the accumulating proposal.`,
-                confidenceScore: 92,
+                critique: 'Waiting for model response.',
+                amendment: '',
                 timestamp: 'Currently analyzing',
               }
             );
@@ -525,7 +487,7 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
                   <span className="text-[10px] text-indigo-300">({step.persona.role})</span>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                  <span className="text-emerald-400 font-mono">Confidence: {step.confidenceScore}%</span>
+                  <span className="text-emerald-400 font-mono">{step.status}</span>
                   <span className="text-indigo-400 group-hover:text-cyan-300 flex items-center gap-0.5 font-medium transition-colors">
                     <Info className="w-3 h-3" /> Inspect
                   </span>
@@ -567,14 +529,14 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="text-base font-bold text-white tracking-wide">
-                    100-Subagent Ratified Consensus & Executive Blueprint
+                    100-Subagent Synthesized Consensus & Executive Blueprint
                   </h4>
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    UNANIMOUS RATIFICATION (100/100)
+                    {relayState.finalConsensus.totalAgentsProcessed} REAL BOT REPLIES
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  100 human subagents deliberated across 10 societal pillars in {Math.round(relayState.finalConsensus.totalTimeMs / 1000)}s
+                  {relayState.finalConsensus.totalAgentsProcessed} AI persona calls completed in {Math.round(relayState.finalConsensus.totalTimeMs / 1000)}s
                 </p>
               </div>
             </div>
@@ -621,7 +583,7 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
                 <span>Definitive Core Decision for Your Initiative</span>
               </span>
               <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded-full">
-                Ratified by 100 Humans
+                Synthesized from model responses
               </span>
             </div>
             <p className="text-sm font-semibold text-white leading-relaxed">
@@ -637,7 +599,7 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
             <div className="flex items-center justify-between">
               <div className="text-xs font-bold text-slate-200 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-cyan-400" />
-                <span>Ratified Consensus Across All 10 Civilizational Pillars</span>
+                <span>Synthesized Consensus Across All 10 Civilizational Pillars</span>
               </div>
               <span className="text-[10px] text-slate-400">
                 Click any pillar to inspect consensus & contributing archetypes
@@ -698,7 +660,7 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
                     {isExpanded && (
                       <div className="px-4 pb-4 pt-1 border-t border-[#232352] space-y-3 animate-fadeIn text-xs">
                         <div className="p-3 rounded-lg bg-[#0d0e24] border border-[#252554] text-slate-200 leading-relaxed">
-                          <strong className="text-emerald-400">Ratified Pillar Consensus: </strong>
+                          <strong className="text-emerald-400">Synthesized Pillar Consensus: </strong>
                           {pillar.consensus}
                         </div>
 
@@ -888,11 +850,11 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-slate-300 font-medium">Deliberation Record Status:</span>
                   <span className="font-semibold text-emerald-400 uppercase tracking-wide text-[10px]">
-                    {selectedAgentDetail.status === 'completed' ? 'Ratified Contribution' : selectedAgentDetail.status}
+                    {selectedAgentDetail.status === 'completed' ? 'Synthesized Contribution' : selectedAgentDetail.status}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-slate-400 font-mono text-[11px]">
-                  <span>Confidence: <strong className="text-cyan-400">{selectedAgentDetail.confidenceScore}%</strong></span>
+                  <span>Status: <strong className="text-cyan-400">{selectedAgentDetail.status}</strong></span>
                   <span>•</span>
                   <span>{selectedAgentDetail.timestamp}</span>
                 </div>
@@ -969,7 +931,7 @@ export const SubagentRelayViewer: React.FC<SubagentRelayViewerProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const copyText = `### #${selectedAgentDetail.agentId} ${selectedAgentDetail.persona.name} (${selectedAgentDetail.persona.archetype})\n- **Role:** ${selectedAgentDetail.persona.role}\n- **What They Are Thinking:** "${selectedAgentDetail.persona.prompt}"\n- **Critique:** ${selectedAgentDetail.critique}\n- **Amendment Adopted:** ${selectedAgentDetail.amendment}\n- **Confidence:** ${selectedAgentDetail.confidenceScore}%`;
+                  const copyText = `### #${selectedAgentDetail.agentId} ${selectedAgentDetail.persona.name} (${selectedAgentDetail.persona.archetype})\n- **Role:** ${selectedAgentDetail.persona.role}\n- **Persona prompt:** "${selectedAgentDetail.persona.prompt}"\n- **Critique:** ${selectedAgentDetail.critique}\n- **Recommendation:** ${selectedAgentDetail.amendment}\n- **Status:** ${selectedAgentDetail.status}`;
                   navigator.clipboard.writeText(copyText);
                 }}
                 className="px-3 py-1.5 rounded-lg bg-[#191938] hover:bg-[#252550] text-slate-300 hover:text-white border border-[#2d2d5c] text-xs font-medium flex items-center gap-1.5 transition-colors"

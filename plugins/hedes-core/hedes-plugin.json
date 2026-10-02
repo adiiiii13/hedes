@@ -1,0 +1,6 @@
+{
+  "id": "hedes-core",
+  "name": "Hedes Project Tools",
+  "description": "Read local project names and search project memory through MCP.",
+  "entry": "../../mcp/hedes-server.mjs"
+}

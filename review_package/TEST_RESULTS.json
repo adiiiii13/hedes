@@ -1,0 +1,47 @@
+{
+  "summary": {
+    "total": 84,
+    "passed": 84,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "consecutiveCleanPasses": 3,
+    "retriesUsed": 0,
+    "durationMs": 1573
+  },
+  "testSuites": [
+    { "name": "checkpoint.test.mjs", "tests": 1, "status": "PASS", "kind": "unit" },
+    { "name": "project-dir.test.mjs", "tests": 1, "status": "PASS", "kind": "security" },
+    { "name": "memory.test.mjs", "tests": 2, "status": "PASS", "kind": "unit" },
+    { "name": "prompt-context.test.mjs", "tests": 1, "status": "PASS", "kind": "security" },
+    { "name": "history-cleanup.test.mjs", "tests": 1, "status": "PASS", "kind": "unit" },
+    { "name": "custom-models.test.mjs", "tests": 2, "status": "PASS", "kind": "integration" },
+    { "name": "persistence-backup.test.mjs", "tests": 2, "status": "PASS", "kind": "integration" },
+    { "name": "hive-relay.test.mjs", "tests": 4, "status": "PASS", "kind": "integration" },
+    { "name": "runtime-storage.test.mjs", "tests": 3, "status": "PASS", "kind": "unit" },
+    { "name": "security-session-auth.test.mjs", "tests": 8, "status": "PASS", "kind": "security" },
+    { "name": "stage01-diagnostics-benchmark.test.mjs", "tests": 3, "status": "PASS", "kind": "benchmark" },
+    { "name": "stage02-durable-runs.test.mjs", "tests": 4, "status": "PASS", "kind": "integration" },
+    { "name": "stage03-gateway.test.mjs", "tests": 4, "status": "PASS", "kind": "integration" },
+    { "name": "stage04-faster-bots.test.mjs", "tests": 4, "status": "PASS", "kind": "benchmark" },
+    { "name": "stage05-context-explorer.test.mjs", "tests": 3, "status": "PASS", "kind": "integration" },
+    { "name": "stage06-evidence-memory.test.mjs", "tests": 3, "status": "PASS", "kind": "integration" },
+    { "name": "stage07-skills.test.mjs", "tests": 3, "status": "PASS", "kind": "integration" },
+    { "name": "stage08-changesets.test.mjs", "tests": 3, "status": "PASS", "kind": "integration" },
+    { "name": "stage09-offline-voice.test.mjs", "tests": 6, "status": "PASS", "kind": "integration" },
+    { "name": "stage10-store-bridge.test.mjs", "tests": 4, "status": "PASS", "kind": "integration" },
+    { "name": "stage11-task-queue.test.mjs", "tests": 3, "status": "PASS", "kind": "integration" },
+    { "name": "plan3-task-quality-fixtures.test.mjs", "tests": 7, "status": "PASS", "kind": "fixture" },
+    { "name": "plan3-voice-edge-cases.test.mjs", "tests": 5, "status": "PASS", "kind": "integration" },
+    { "name": "plan3-mcp-plugin-bridge-lifecycle.test.mjs", "tests": 3, "status": "PASS", "kind": "integration" },
+    { "name": "plan3-failure-scenarios.test.mjs", "tests": 4, "status": "PASS", "kind": "fault_injection" }
+  ],
+  "readinessGates": {
+    "windowsPrivateBeta": "VERIFIED_READY",
+    "windowsPublicProduction": "BLOCKED_SIGNING_CERTIFICATE",
+    "androidTermuxResponsive": "VERIFIED_READY",
+    "androidPhysicalHardware": "BLOCKED_NO_DEVICE_ATTACHED",
+    "offlineSpeechWorkspace": "VERIFIED_READY",
+    "physicalMicrophoneAcoustics": "REQUIRES_USER_SPOKEN_SESSION"
+  }
+}

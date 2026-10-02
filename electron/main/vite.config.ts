@@ -1,5 +1,6 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
+import { builtinModules } from 'node:module';
 
 export default defineConfig({
   build: {
@@ -9,6 +10,8 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
+        ...builtinModules,
+        ...builtinModules.map(name => `node:${name}`),
         'vite',
         'electron',
         ...[
@@ -26,8 +29,9 @@ export default defineConfig({
         'node:util',
         'node:stream',
         'node:events',
+        'node:child_process',
         'electron-store',
-        '@remix-run/node',
+        'react-router',
 
         // "mime", // NOTE: don't enable. not working if it's external.
         'electron-updater',

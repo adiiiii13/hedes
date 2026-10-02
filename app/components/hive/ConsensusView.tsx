@@ -17,11 +17,11 @@ export const ConsensusView: React.FC = () => {
       <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-emerald-500/20">
         <div className="flex items-center gap-1.5 font-bold text-emerald-400">
           <Award className="w-4 h-4 text-emerald-400" />
-          <span>Supreme Swarm Consensus Unlocked</span>
+          <span>Perspective summary</span>
         </div>
         <div className="flex items-center gap-1 text-[10px] text-emerald-300 font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30">
           <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-          <span>100/100 VOTES VERIFIED</span>
+          <span>{state.synthesisFallback ? 'Direct replies' : `${state.successfulBotsCount} replies summarized`}</span>
         </div>
       </div>
 

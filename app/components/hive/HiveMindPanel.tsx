@@ -1,39 +1,73 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   hiveMindState,
   isHivePanelExpanded,
   toggleHivePanel,
+  cancelHiveMindSwarm,
+  retryFailedBots,
 } from '~/stores/hive';
 import { BotGrid } from './BotGrid';
 import { DebateLog } from './DebateLog';
 import { ConsensusView } from './ConsensusView';
-import { Bot, ChevronDown, ChevronUp, Cpu, Flame, Layers } from 'lucide-react';
+import { Bot, ChevronDown, ChevronUp, Cpu, Flame, Layers, Square, RotateCcw } from 'lucide-react';
 
 export const HiveMindPanel: React.FC = () => {
   const state = useStore(hiveMindState);
   const isExpanded = useStore(isHivePanelExpanded);
   const [activeTab, setActiveTab] = useState<'matrix' | 'debate' | 'consensus'>('matrix');
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  useEffect(() => {
+    if (state.phase === 'complete') setActiveTab('consensus');
+  }, [state.phase]);
 
   if (!state.isActive) {
     return null;
   }
 
+  const isRunning = !['complete', 'error', 'cancelled', 'idle'].includes(state.phase);
+
   const getPhaseBadge = () => {
     switch (state.phase) {
       case 'spawning':
-        return <span className="text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">Spawning 100 Bots</span>;
+        return <span className="text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">Preparing perspectives</span>;
       case 'analyzing':
-        return <span className="text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 animate-pulse">Parallel Swarm Analysis</span>;
+        return <span className="text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 animate-pulse">Exploring perspectives</span>;
       case 'debating':
         return <span className="text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20 animate-pulse">Cross-Category Debate</span>;
       case 'consensus':
         return <span className="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Synthesizing Consensus</span>;
       case 'complete':
-        return <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Consensus Reached</span>;
+        return <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Summary ready</span>;
+      case 'cancelled':
+        return <span className="text-slate-400 bg-slate-500/10 px-2 py-0.5 rounded border border-slate-500/20">Cancelled</span>;
+      case 'error':
+        return <span className="text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">Failed</span>;
       default:
         return null;
+    }
+  };
+
+  const handleRetry = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsRetrying(true);
+    try {
+      await retryFailedBots();
+    } catch (err) {
+      console.error('Failed to retry bots', err);
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  const handleCancel = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await cancelHiveMindSwarm();
+    } catch (err) {
+      console.error('Failed to cancel swarm', err);
     }
   };
 
@@ -51,21 +85,45 @@ export const HiveMindPanel: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs text-violet-200 tracking-wide">
-                100-BOT HIVE MIND SWARM
+                PERSPECTIVE PLANNER
               </span>
               {getPhaseBadge()}
             </div>
             <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-              <span>100 Autonomous Agents</span>
+              <span>{state.successfulBotsCount} replies{state.failedBotsCount ? ` · ${state.failedBotsCount} failed` : ''}</span>
               <span>•</span>
-              <span>10 Categories</span>
-              <span>•</span>
-              <span className="text-violet-300 font-medium">{state.progress}% Synchronized</span>
+              <span className="text-violet-300 font-medium">{state.progress}% complete</span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Action buttons */}
+          {isRunning && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs transition-colors"
+              title="Cancel swarm run"
+            >
+              <Square className="w-3 h-3 fill-rose-300" />
+              <span>Cancel</span>
+            </button>
+          )}
+
+          {!isRunning && state.failedBotsCount > 0 && (
+            <button
+              type="button"
+              disabled={isRetrying}
+              onClick={handleRetry}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-violet-200 border border-violet-500/40 text-xs transition-colors disabled:opacity-50"
+              title="Retry failed bots"
+            >
+              <RotateCcw className={`w-3 h-3 ${isRetrying ? 'animate-spin' : ''}`} />
+              <span>Retry ({state.failedBotsCount})</span>
+            </button>
+          )}
+
           {/* Mini progress ring or bar */}
           <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden border border-white/5">
             <motion.div
@@ -100,7 +158,7 @@ export const HiveMindPanel: React.FC = () => {
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>100-Bot Grid</span>
+                <span>Role Grid</span>
               </button>
               <button
                 onClick={() => setActiveTab('debate')}
@@ -111,7 +169,7 @@ export const HiveMindPanel: React.FC = () => {
                 }`}
               >
                 <Flame className="w-3.5 h-3.5" />
-                <span>Live Debate Log ({state.debateLogs.length})</span>
+                  <span>Bot replies ({state.debateLogs.length})</span>
               </button>
               {state.consensusSummary && (
                 <button
@@ -123,7 +181,7 @@ export const HiveMindPanel: React.FC = () => {
                   }`}
                 >
                   <Bot className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Final Master Plan</span>
+                  <span>Final summary</span>
                 </button>
               )}
             </div>

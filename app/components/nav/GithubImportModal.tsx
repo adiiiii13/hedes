@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Github, Download, Loader2 } from 'lucide-react';
-import { useStore } from '@nanostores/react';
-import { currentChatId } from '~/stores/chat';
+import { resetChat } from '~/stores/chat';
 
 import { loadProjectFiles, workspaceViewMode } from '~/stores/workspace';
 
@@ -13,7 +12,6 @@ interface GithubImportModalProps {
 export const GithubImportModal: React.FC<GithubImportModalProps> = ({ isOpen, onClose }) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const chatId = useStore(currentChatId);
 
   if (!isOpen) return null;
 
@@ -24,7 +22,7 @@ export const GithubImportModal: React.FC<GithubImportModalProps> = ({ isOpen, on
       const res = await fetch('/api/local/github', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId: chatId || 'default-chat', repoUrl: url }),
+        body: JSON.stringify({ repoUrl: url }),
       });
       const data = await res.json();
       
@@ -33,7 +31,8 @@ export const GithubImportModal: React.FC<GithubImportModalProps> = ({ isOpen, on
       }
 
       // Immediately load all cloned files into the File Explorer
-      await loadProjectFiles(chatId || 'default-chat');
+      await resetChat({ initialize: false, chatId: data.resolvedChatId });
+      await loadProjectFiles(data.resolvedChatId);
       workspaceViewMode.set('code');
 
       const prompt = `I have just cloned this GitHub repository into the workspace. Please review the project structure and package.json, install dependencies, and start the application so we can preview it.`;

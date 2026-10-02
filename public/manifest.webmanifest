@@ -1,0 +1,13 @@
+{
+  "name": "Hedes Studio",
+  "short_name": "Hedes",
+  "description": "AI development workspace",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0d14",
+  "theme_color": "#0b0d14",
+  "icons": [
+    { "src": "/logo-dark.png", "sizes": "any", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "any", "type": "image/png", "purpose": "maskable" }
+  ]
+}

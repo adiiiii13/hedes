@@ -1,5 +1,5 @@
-import React, { memo } from 'react';
-import { User } from 'lucide-react';
+import React, { memo, useState } from 'react';
+import { User, Copy, Check } from 'lucide-react';
 import { Markdown } from './Markdown';
 import type { ChatMessage } from '~/stores/chat';
 
@@ -8,6 +8,12 @@ interface UserMessageProps {
 }
 
 export const UserMessage = memo(({ message }: UserMessageProps) => {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    await navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
   return (
     <div className="flex flex-col gap-2 w-full py-3 group">
       {/* Sender Header */}
@@ -19,6 +25,7 @@ export const UserMessage = memo(({ message }: UserMessageProps) => {
         <span className="text-[10px] text-slate-500 font-mono">
           {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
+        <button type="button" onClick={() => { void copy(); }} className="ml-auto rounded-md p-1 text-slate-500 opacity-0 transition hover:bg-white/10 hover:text-cyan-200 focus:opacity-100 group-hover:opacity-100" title="Copy message" aria-label="Copy message">{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</button>
       </div>
 
       {/* Message Body */}

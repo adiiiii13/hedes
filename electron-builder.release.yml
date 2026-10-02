@@ -1,0 +1,5 @@
+extends: ./electron-builder.yml
+forceCodeSigning: true
+publish: null
+win:
+  publisherName: ${env.HEDES_PUBLISHER_NAME}

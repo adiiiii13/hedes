@@ -1,11 +1,8 @@
 /**
  * HedesStudio
  * context-engine.ts
- * Implements memory formulas for persistent AI memory across conversation turns.
- *
- * Formula 1: simplifyHedesActions  — prune old file code bodies to "..." to save tokens
- * Formula 2: buildContextBuffer    — inject current workspace files into system prompt
- * Formula 3: pruneMessages         — clean up assistant history before sending to LLM
+ * Implements hierarchical memory formulas, lazy context selection,
+ * and token budget inspection for persistent AI memory across conversation turns.
  */
 
 export interface SimpleMessage {
@@ -14,32 +11,48 @@ export interface SimpleMessage {
   images?: string[];
 }
 
+export interface ContextInspectorReport {
+  includedFiles: Array<{
+    path: string;
+    reason: 'explicit' | 'active_editor' | 'search_match' | 'dependency' | 'project';
+    chars: number;
+    tokens: number;
+  }>;
+  omittedFiles: Array<{
+    path: string;
+    reason: string;
+  }>;
+  memorySources: string[];
+  estimatedTokens: number;
+  budgetLimitTokens: number;
+}
+
+export interface AdvancedContextOptions {
+  userPrompt?: string;
+  activeEditorPath?: string;
+  searchMatches?: string[];
+  memoryContext?: string;
+  maxTokenBudget?: number; // default ~16,000 tokens (~64,000 chars)
+  onInspectorReport?: (report: ContextInspectorReport) => void;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Formula 1: Collapse file-action bodies in OLD assistant messages
-// This reduces massive code dumps to lightweight file-path references.
-// AI still knows the files exist — but doesn't re-read 10,000 tokens of history.
 // ─────────────────────────────────────────────────────────────────────────────
 export function simplifyHedesActions(content: string): string {
-  // Collapse <hedesAction type="file"> bodies to "..."
   let result = content.replace(
     /(<hedesAction[^>]*type="file"[^>]*>)([\s\S]*?)(<\/hedesAction>)/g,
-    (_match, openTag, _body, closeTag) => `${openTag}\n  ...\n${closeTag}`,
+    (_match, openTag, _body, closeTag) => `${openTag}\n  ...\n${closeTag}`
   );
 
-  // Also handle boltAction format (for compatibility)
   result = result.replace(
     /(<boltAction[^>]*type="file"[^>]*>)([\s\S]*?)(<\/boltAction>)/g,
-    (_match, openTag, _body, closeTag) => `${openTag}\n  ...\n${closeTag}`,
+    (_match, openTag, _body, closeTag) => `${openTag}\n  ...\n${closeTag}`
   );
 
-  // Remove <think>...</think> blocks from reasoning models (saves a lot of tokens)
   result = result.replace(/<think>[\s\S]*?<\/think>/g, '');
-
-  // Remove <div class="__boltThought__">...</div> blocks
   result = result.replace(/<div\s+class=["']__boltThought__["'][^>]*>[\s\S]*?<\/div>/gi, '');
   result = result.replace(/<div\s+class=["']__boltThought__["'][^>]*\/>/gi, '');
-
-  // Remove any __boltArtifact__ div tags so the LLM never sees them in prompt history
   result = result.replace(/<div\s+class=["']__boltArtifact__["'][^>]*>[\s\S]*?<\/div>/gi, '');
   result = result.replace(/<div\s+class=["']__boltArtifact__["'][^>]*\/>/gi, '');
 
@@ -47,9 +60,7 @@ export function simplifyHedesActions(content: string): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Formula 2: Build the CONTEXT BUFFER from current workspace files
-// This is injected into the system prompt so the AI knows exactly what
-// code is currently on disk — even if turn 1 messages are pruned.
+// Formula 2: Build the CONTEXT BUFFER with Hierarchical Priority Selection
 // ─────────────────────────────────────────────────────────────────────────────
 const IGNORE_EXTENSIONS = [
   '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp',
@@ -57,7 +68,7 @@ const IGNORE_EXTENSIONS = [
   '.mp3', '.mp4', '.wav', '.ogg', '.webm',
   '.zip', '.tar', '.gz', '.rar',
   '.pdf', '.doc', '.docx',
-  '.lock', // package-lock.json, yarn.lock
+  '.lock',
 ];
 
 const IGNORE_PATHS = [
@@ -76,55 +87,146 @@ const IGNORE_PATHS = [
 
 function shouldIgnoreFile(filePath: string): boolean {
   const lowerPath = filePath.toLowerCase();
-
-  // Check ignored path prefixes
   for (const ignorePath of IGNORE_PATHS) {
     if (lowerPath.includes(ignorePath)) return true;
   }
-
-  // Check ignored extensions
   for (const ext of IGNORE_EXTENSIONS) {
     if (lowerPath.endsWith(ext)) return true;
   }
-
   return false;
 }
 
-export function buildContextBuffer(files: Record<string, string>): string {
+/**
+ * Calculates priority rank for context selection:
+ * 1: Explicitly requested in prompt
+ * 2: Active editor open file
+ * 3: Search matches
+ * 4: Nearby dependencies (same directory or imported)
+ * 5: General project files
+ */
+function getFilePriority(
+  filePath: string,
+  options?: AdvancedContextOptions
+): { rank: number; reason: 'explicit' | 'active_editor' | 'search_match' | 'dependency' | 'project' } {
+  const norm = filePath.replace(/\\/g, '/');
+  const baseName = norm.split('/').pop() || '';
+  const baseWithoutExt = baseName.replace(/\.[^/.]+$/, '');
+  const prompt = options?.userPrompt || '';
+
+  if (
+    prompt.includes(norm) ||
+    (baseName.length > 3 && prompt.includes(baseName)) ||
+    (baseWithoutExt.length > 3 && prompt.includes(baseWithoutExt))
+  ) {
+    return { rank: 1, reason: 'explicit' };
+  }
+
+  if (options?.activeEditorPath && options.activeEditorPath.replace(/\\/g, '/') === norm) {
+    return { rank: 2, reason: 'active_editor' };
+  }
+
+  if (options?.searchMatches?.some((m) => m.replace(/\\/g, '/') === norm)) {
+    return { rank: 3, reason: 'search_match' };
+  }
+
+  if (options?.activeEditorPath) {
+    const editorDir = options.activeEditorPath.replace(/\\/g, '/').split('/').slice(0, -1).join('/');
+    const fileDir = norm.split('/').slice(0, -1).join('/');
+    if (editorDir && editorDir === fileDir) {
+      return { rank: 4, reason: 'dependency' };
+    }
+  }
+
+  return { rank: 5, reason: 'project' };
+}
+
+export function buildContextBuffer(
+  files: Record<string, string>,
+  options?: AdvancedContextOptions
+): string {
   if (!files || Object.keys(files).length === 0) return '';
 
-  const fileEntries = Object.entries(files)
-    .filter(([path]) => !shouldIgnoreFile(path))
-    .filter(([, content]) => content && content.length > 0)
-    // Sort by path for consistent ordering
-    .sort(([a], [b]) => a.localeCompare(b));
+  const maxBudgetTokens = options?.maxTokenBudget || 16000;
+  const maxBudgetChars = maxBudgetTokens * 4;
+  let remainingChars = maxBudgetChars;
 
-  if (fileEntries.length === 0) return '';
+  const inspectorReport: ContextInspectorReport = {
+    includedFiles: [],
+    omittedFiles: [],
+    memorySources: options?.memoryContext ? ['project-memory-tree'] : [],
+    estimatedTokens: 0,
+    budgetLimitTokens: maxBudgetTokens,
+  };
 
-  const fileActions = fileEntries
-    .map(([path, content]) => {
-      // Truncate very large files to avoid blowing up the context window
-      const truncated = content.length > 8000
-        ? content.slice(0, 8000) + '\n\n... [file truncated for context]'
-        : content;
-      return `<hedesAction type="file" filePath="${path}">\n${truncated}\n</hedesAction>`;
+  // Filter and classify candidates
+  const prioritizedCandidates = Object.entries(files)
+    .filter(([filePath]) => {
+      if (shouldIgnoreFile(filePath)) {
+        inspectorReport.omittedFiles.push({ path: filePath, reason: 'ignored_extension_or_build_path' });
+        return false;
+      }
+      return true;
     })
-    .join('\n');
+    .map(([filePath, content]) => {
+      const { rank, reason } = getFilePriority(filePath, options);
+      return { path: filePath, content, rank, reason };
+    })
+    .sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      return a.path.localeCompare(b.path);
+    });
 
-  return `<hedesArtifact id="context-buffer" title="Current Project Files">\n${fileActions}\n</hedesArtifact>`;
+  const fileActions: string[] = [];
+
+  for (const item of prioritizedCandidates) {
+    if (remainingChars <= 0) {
+      inspectorReport.omittedFiles.push({ path: item.path, reason: 'token_budget_exhausted' });
+      continue;
+    }
+
+    const maxFileSize = Math.min(8000, remainingChars);
+    const content = item.content || '';
+    const isTruncated = content.length > maxFileSize;
+    const body = isTruncated
+      ? content.slice(0, maxFileSize) + '\n\n... [file truncated for context]'
+      : content;
+
+    const charsUsed = body.length;
+    remainingChars -= charsUsed;
+    const tokensEstimate = Math.ceil(charsUsed / 4);
+    inspectorReport.estimatedTokens += tokensEstimate;
+
+    inspectorReport.includedFiles.push({
+      path: item.path,
+      reason: item.reason,
+      chars: charsUsed,
+      tokens: tokensEstimate,
+    });
+
+    fileActions.push(
+      `<hedesAction type="file" filePath="${item.path}" untrustedTaskData="true">\n${body}\n</hedesAction>`
+    );
+  }
+
+  if (options?.onInspectorReport) {
+    options.onInspectorReport(inspectorReport);
+  }
+
+  if (fileActions.length === 0) return '';
+
+  return (
+    `<hedesArtifact id="context-buffer" title="Current Project Files (Untrusted Task Data)" untrustedTaskData="true">\n` +
+    `${fileActions.join('\n')}\n` +
+    `</hedesArtifact>`
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Formula 3: Prune messages before sending to LLM
-// Apply simplification to all past assistant messages to minimize token usage.
-// Keep the last 2 user messages and last 2 assistant messages in full detail.
-// All older assistant messages get their file code collapsed.
 // ─────────────────────────────────────────────────────────────────────────────
 export function pruneMessagesForLLM(messages: SimpleMessage[]): SimpleMessage[] {
   if (messages.length === 0) return [];
-
-  // Always keep the last N messages intact — only prune older ones
-  const KEEP_LAST_FULL = 4; // last 4 messages stay untouched
+  const KEEP_LAST_FULL = 4;
 
   return messages.map((msg, idx) => {
     const isRecent = idx >= messages.length - KEEP_LAST_FULL;
@@ -136,7 +238,6 @@ export function pruneMessagesForLLM(messages: SimpleMessage[]): SimpleMessage[] 
           content: simplifyHedesActions(msg.content),
         };
       }
-      // Even for recent messages, strip raw UI placeholder div tags
       let cleanContent = msg.content
         .replace(/<div\s+class=["']__boltArtifact__["'][^>]*>[\s\S]*?<\/div>/gi, '')
         .replace(/<div\s+class=["']__boltArtifact__["'][^>]*\/>/gi, '')
@@ -153,10 +254,6 @@ export function pruneMessagesForLLM(messages: SimpleMessage[]): SimpleMessage[] 
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: Determine if this is a follow-up (modification) turn
-// Used by prompt builder to switch from "build from scratch" to "modify only"
-// ─────────────────────────────────────────────────────────────────────────────
 export function isFollowUpTurn(messages: SimpleMessage[]): boolean {
   const userMessages = messages.filter((m) => m.role === 'user');
   return userMessages.length > 1;

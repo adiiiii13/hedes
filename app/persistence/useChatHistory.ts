@@ -29,10 +29,12 @@ export function useChatHistory() {
         mergedMap.set(c.id, c);
       }
 
+      const diskSaves: Promise<void>[] = [];
       for (const p of diskProjects) {
         const existing = mergedMap.get(p.id);
         if (!existing) {
           const newRecord: ChatRecord = {
+            revision: p.revision || 1,
             id: p.id,
             title: p.title || p.name || p.id,
             messages: p.messages || [],
@@ -42,20 +44,29 @@ export function useChatHistory() {
             updatedAt: p.updatedAt || Date.now(),
           };
           mergedMap.set(p.id, newRecord);
-          saveChat(newRecord).catch(() => {});
+          diskSaves.push(saveChat(newRecord));
         } else {
+          existing.revision = p.revision || 1;
           // If disk version is newer or existing has empty title
           if ((!existing.title || existing.title === 'New Project') && p.title && p.title !== p.id) {
             existing.title = p.title;
           }
           if (p.updatedAt && p.updatedAt > existing.updatedAt) {
             existing.updatedAt = p.updatedAt;
+            existing.messages = p.messages || existing.messages;
+            existing.model = p.model || existing.model;
+            existing.provider = p.provider || existing.provider;
+            existing.title = p.title || existing.title;
+            diskSaves.push(saveChat(existing));
           }
         }
       }
 
+      await Promise.allSettled(diskSaves);
+
       const combined = Array.from(mergedMap.values()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
       setChats(combined);
+      return combined;
     } catch (err) {
       console.error('Failed to load chat history', err);
     } finally {
@@ -64,15 +75,16 @@ export function useChatHistory() {
   }, []);
 
   useEffect(() => {
-    refreshChats().then(() => {
+    refreshChats().then((allChats) => {
       // Restore last active chat from localStorage on boot
       const lastChatId = localStorage.getItem('hedes_current_chat');
       if (lastChatId) {
-        listChats().then(allChats => {
-          const chat = allChats.find(c => c.id === lastChatId);
+        Promise.resolve(allChats || []).then((availableChats) => {
+          const chat = availableChats.find(c => c.id === lastChatId);
           if (chat) {
-            import('~/stores/chat').then(({ currentChatId, loadMessagesIntoStore }) => {
+            import('~/stores/chat').then(({ currentChatId, loadMessagesIntoStore, projectRevision }) => {
               currentChatId.set(chat.id);
+              projectRevision.set(chat.revision || 1);
               loadMessagesIntoStore(chat.messages || []);
             });
             import('~/stores/workspace').then(({ loadProjectFiles }) => {

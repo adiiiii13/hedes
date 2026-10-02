@@ -1,5 +1,5 @@
-import { createOllama } from 'ollama-ai-provider';
-import type { LanguageModelV1 } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import type { LanguageModel } from 'ai';
 import type { LLMAdapter, LLMProviderOptions } from '../adapter';
 import type { ModelInfo } from '~/types/model';
 
@@ -12,6 +12,8 @@ export class OllamaAdapter implements LLMAdapter {
 
   getStaticModels(): ModelInfo[] {
     return [
+      { name: 'qwen2.5-coder:1.5b', label: 'Qwen 2.5 Coder 1.5B (Local, light)', provider: this.id, maxTokenAllowed: 32000 },
+      { name: 'qwen2.5-coder:3b', label: 'Qwen 2.5 Coder 3B (Local)', provider: this.id, maxTokenAllowed: 32000 },
       { name: 'llama3.2', label: 'Llama 3.2 (Local)', provider: this.id, maxTokenAllowed: 128000 },
       { name: 'llama3.1', label: 'Llama 3.1 (Local)', provider: this.id, maxTokenAllowed: 128000 },
       { name: 'qwen2.5-coder:7b', label: 'Qwen 2.5 Coder 7B (Local)', provider: this.id, maxTokenAllowed: 32000 },
@@ -40,12 +42,12 @@ export class OllamaAdapter implements LLMAdapter {
     }
   }
 
-  getModel(modelId: string, options?: LLMProviderOptions): LanguageModelV1 {
+  getModel(modelId: string, options?: LLMProviderOptions): LanguageModel {
     const raw = (options?.baseUrl || process.env.OLLAMA_API_BASE_URL || this.defaultBaseUrl).replace(/\/+$/, '');
-    const baseURL = raw.endsWith('/api') ? raw : `${raw}/api`;
-    const client = createOllama({
+    const baseURL = raw.replace(/\/(api|v1)$/, '') + '/v1';
+    const client = createOpenAI({ apiKey: 'ollama',
       baseURL,
     });
-    return client(modelId);
+    return client.chat(modelId);
   }
 }

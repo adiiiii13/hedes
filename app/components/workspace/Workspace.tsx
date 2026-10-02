@@ -12,9 +12,11 @@ const SIDEBAR_MAX = 600;
 const TERMINAL_MIN_PCT = 15;
 const TERMINAL_MAX_PCT = 75;
 
-export const Workspace: React.FC = () => {
+export const Workspace: React.FC<{ mobileFiles?: boolean }> = ({ mobileFiles = false }) => {
   const viewMode = useStore(workspaceViewMode);
   const [isTerminalOpen, setIsTerminalOpen] = useState(true);
+
+  useEffect(() => { if (window.matchMedia('(max-width: 767px)').matches) setIsTerminalOpen(false); }, []);
 
   // Auto-sync project files from local disk on initial mount
   useEffect(() => {
@@ -84,12 +86,12 @@ export const Workspace: React.FC = () => {
   }, []);
 
   return (
-    <div ref={containerRef} className="flex flex-row h-full w-full bg-[#0a0a1a] overflow-hidden">
+    <div ref={containerRef} className="flex flex-row h-full w-full app-background overflow-hidden">
       {/* ── Main Content Area (Editor / Preview / Responsive Full-Width Terminal) ── */}
-      <div ref={mainAreaRef} className="flex-1 relative flex flex-col h-full min-w-0">
+      <div ref={mainAreaRef} className={`flex-1 relative h-full min-w-0 ${mobileFiles ? 'hidden' : 'flex'} md:flex md:flex-col flex-col`}>
         {viewMode === 'terminal' ? (
           // 100% Full View Terminal Mode
-          <div className="w-full h-full flex flex-col bg-[#080816]">
+          <div className="w-full h-full flex flex-col app-background">
             <FloatingTerminal />
           </div>
         ) : (
@@ -134,7 +136,7 @@ export const Workspace: React.FC = () => {
 
                 <div
                   style={{ height: `${terminalPct}%` }}
-                  className="w-full flex-none min-h-[120px] overflow-hidden bg-[#080816] flex flex-col"
+                  className="w-full flex-none min-h-[120px] overflow-hidden app-background flex flex-col"
                 >
                   <FloatingTerminal onClose={() => setIsTerminalOpen(false)} />
                 </div>
@@ -143,7 +145,7 @@ export const Workspace: React.FC = () => {
 
             {/* If terminal is collapsed, show subtle restore tab at bottom-left */}
             {!isTerminalOpen && (
-              <div className="h-6 flex-none bg-[#0a0a1a] border-t border-[#1e1e3a] flex items-center px-3">
+              <div className="h-6 flex-none app-background border-t border-[#1e1e3a] flex items-center px-3">
                 <button
                   type="button"
                   onClick={() => setIsTerminalOpen(true)}
@@ -162,7 +164,7 @@ export const Workspace: React.FC = () => {
       {/* ── Horizontal Drag Handle (resizes sidebar width) ── */}
       <div
         onMouseDown={startDragH}
-        className="w-1 flex-none cursor-col-resize bg-[#1e1e3a] hover:bg-emerald-500/60 active:bg-emerald-500 transition-colors relative group"
+        className="hidden w-1 flex-none cursor-col-resize bg-[#1e1e3a] hover:bg-emerald-500/60 active:bg-emerald-500 transition-colors relative group md:block"
         title="Drag to resize sidebar width"
       >
         <div className="absolute inset-y-0 -left-0.5 -right-0.5 group-hover:bg-emerald-500/20 transition-colors" />
@@ -172,7 +174,7 @@ export const Workspace: React.FC = () => {
       <div
         ref={sidebarRef}
         style={{ width: sidebarWidth, minWidth: SIDEBAR_MIN, maxWidth: SIDEBAR_MAX }}
-        className="h-full flex flex-col border-l border-[#1e1e3a] bg-[#0a0a1a] flex-none overflow-hidden"
+        className={`app-explorer-panel h-full flex-col border-l border-[#1e1e3a] app-background flex-none overflow-hidden ${mobileFiles ? 'flex' : 'hidden'} md:flex`}
       >
         <FileDrawer />
       </div>

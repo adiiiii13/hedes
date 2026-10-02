@@ -5,6 +5,10 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'Segoe UI Variable', 'Segoe UI', 'system-ui', 'sans-serif'],
+        mono: ['Cascadia Code', 'JetBrains Mono', 'Consolas', 'monospace'],
+      },
       colors: {
         hedes: {
           bg: '#0a0a1a',
@@ -19,7 +23,7 @@ export default {
           'violet-glow': 'rgba(139, 92, 246, 0.25)',
           cyan: '#06b6d4',
           text: '#e2e8f0',
-          muted: '#64748b',
+          muted: '#94a3b8',
           dim: '#334155',
         },
       },

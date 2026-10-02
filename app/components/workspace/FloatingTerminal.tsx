@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from '@nanostores/react';
 import { terminalStore, activeProjectDir, activeProjectName } from '~/stores/workspace';
 import { currentChatId } from '~/stores/chat';
+import { appearance } from '~/stores/appearance';
 import type { ITerminal } from '~/types/terminal';
 import {
   Terminal as TerminalIcon,
@@ -11,16 +12,11 @@ import {
   Minimize2,
   Trash2,
   Square,
-  Sparkles,
-  RefreshCw,
   Folder,
   Play,
   Check,
   ChevronRight,
-  ChevronsUp,
-  ChevronsDown,
   ArrowDown,
-  Wrench,
 } from 'lucide-react';
 
 interface TerminalTab {
@@ -37,6 +33,13 @@ interface TerminalSession {
   historyIndex: number;
   currentInput: string;
   cwd: string;
+}
+
+function terminalBackground() {
+  const selected = appearance.get();
+  return selected.wallpaper === 'none' || (selected.wallpaper === 'custom' && !selected.wallpaperData)
+    ? '#080816'
+    : 'rgba(8, 8, 22, 0)';
 }
 
 function formatPrompt(cwd?: string): string {
@@ -76,6 +79,13 @@ export const FloatingTerminal: React.FC<FloatingTerminalProps> = ({ onClose }) =
 
   // Map of tabId -> Session state
   const sessionsRef = useRef<Map<string, TerminalSession>>(new Map());
+
+  useEffect(() => appearance.subscribe(() => {
+    const background = terminalBackground();
+    for (const session of sessionsRef.current.values()) {
+      session.term.options.theme = { ...session.term.options.theme, background };
+    }
+  }), []);
   // In-flight init lock to prevent duplicate async initialization
   const initializingTabsRef = useRef<Set<string>>(new Set());
   // Map of tabId -> container DOM element
@@ -269,7 +279,7 @@ export const FloatingTerminal: React.FC<FloatingTerminalProps> = ({ onClose }) =
           smoothScrollDuration: 120,
           allowTransparency: true,
           theme: {
-            background: '#080816',
+            background: terminalBackground(),
             foreground: '#e2e8f0',
             cursor: '#10b981',
             cursorAccent: '#080816',
@@ -567,7 +577,7 @@ export const FloatingTerminal: React.FC<FloatingTerminalProps> = ({ onClose }) =
     <div
       ref={mainWrapperRef}
       onClick={focusActive}
-      className={`flex flex-col bg-[#080816] overflow-hidden cursor-text ${
+      className={`flex flex-col app-background overflow-hidden cursor-text ${
         isMaximized
           ? 'fixed inset-0 z-50 w-screen h-screen shadow-2xl'
           : 'w-full h-full relative z-10'
@@ -576,7 +586,7 @@ export const FloatingTerminal: React.FC<FloatingTerminalProps> = ({ onClose }) =
       {/* ── Top Bar: Tabs, Shell Selector & Actions ── */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex items-center justify-between px-2.5 py-1.5 bg-[#0e0e24] border-b border-[#1e1e3a] text-xs shrink-0 gap-2 overflow-x-auto modern-scrollbar select-none cursor-default"
+        className="flex items-center justify-between px-2.5 py-1.5 app-surface border-b border-[#1e1e3a] text-xs shrink-0 gap-2 overflow-x-auto modern-scrollbar select-none cursor-default"
       >
         {/* Left: Terminal Icon + Tabs List + Plus Button */}
         <div className="flex items-center gap-1.5 min-w-0">
@@ -695,66 +705,6 @@ export const FloatingTerminal: React.FC<FloatingTerminalProps> = ({ onClose }) =
             </button>
           )}
 
-          {/* Auto-Fix with AI */}
-          <button
-            type="button"
-            onClick={() => {
-              const s = sessionsRef.current.get(activeTabId);
-              let logs = '';
-              if (s?.term?.buffer?.active) {
-                const buffer = s.term.buffer.active;
-                const lines: string[] = [];
-                const count = Math.min(buffer.length, 60);
-                for (let i = buffer.length - count; i < buffer.length; i++) {
-                  const line = buffer.getLine(i);
-                  if (line) lines.push(line.translateToString(true));
-                }
-                logs = lines.filter(Boolean).join('\n').trim();
-              }
-              const prompt = logs
-                ? `⚡ Auto-Fix Diagnostics:\nThe application encountered an issue. Here are the recent terminal logs and errors:\n\`\`\`\n${logs}\n\`\`\`\nPlease analyze the root cause, inspect the project files, and write the complete replacement code using <boltAction type="file"> to fix the issue cleanly.`
-                : `⚡ Auto-Fix Diagnostics:\nPlease inspect all current project files for syntax errors, missing imports, broken dependencies, or runtime issues, and output complete repaired replacement files so the website builds and runs without errors.`;
-              window.dispatchEvent(new CustomEvent('trigger-chat', { detail: prompt }));
-            }}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-mono transition-colors cursor-pointer shadow-[0_0_8px_rgba(245,158,11,0.15)]"
-            title="Analyze terminal logs and automatically fix code with AI"
-          >
-            <Wrench className="w-2.5 h-2.5 text-amber-400" />
-            <span>Auto-Fix</span>
-          </button>
-
-          {/* Scroll to Top */}
-          <button
-            type="button"
-            onClick={() => {
-              const s = sessionsRef.current.get(activeTabId);
-              if (s?.term) {
-                s.term.scrollToTop();
-                setIsScrolledUp(true);
-              }
-            }}
-            className="p-1 rounded text-slate-400 hover:text-cyan-300 hover:bg-white/5 transition-colors cursor-pointer"
-            title="Scroll to Top of Terminal History (Shift+Home)"
-          >
-            <ChevronsUp className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Scroll to Bottom */}
-          <button
-            type="button"
-            onClick={() => {
-              const s = sessionsRef.current.get(activeTabId);
-              if (s?.term) {
-                s.term.scrollToBottom();
-                setIsScrolledUp(false);
-              }
-            }}
-            className="p-1 rounded text-slate-400 hover:text-emerald-400 hover:bg-white/5 transition-colors cursor-pointer"
-            title="Scroll to Bottom of Terminal (Shift+End)"
-          >
-            <ChevronsDown className="w-3.5 h-3.5" />
-          </button>
-
           {/* Clear Active Terminal */}
           <button
             type="button"
@@ -803,7 +753,7 @@ export const FloatingTerminal: React.FC<FloatingTerminalProps> = ({ onClose }) =
       {/* ── Terminal Instances Container (Zero gap, edge-to-edge, accurate flex height) ── */}
       <div
         onClick={focusActive}
-        className="flex-1 min-h-0 w-full relative overflow-hidden bg-[#080816] p-0"
+        className="flex-1 min-h-0 w-full relative overflow-hidden app-background app-terminal-canvas p-0"
       >
         {tabs.map((tab) => {
           const isActive = activeTabId === tab.id;
@@ -853,7 +803,7 @@ export const FloatingTerminal: React.FC<FloatingTerminalProps> = ({ onClose }) =
       {/* ── Direct Command Input Bar (Type command yourself & execute) ── */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="px-3 py-2 bg-[#0c0c20] border-t border-[#1e1e3a] shrink-0 select-none"
+        className="px-3 py-2 bg-[#0c0c20] app-terminal-toolbar border-t border-[#1e1e3a] shrink-0 select-none"
       >
         <form
           onSubmit={(e) => {
@@ -875,7 +825,7 @@ export const FloatingTerminal: React.FC<FloatingTerminalProps> = ({ onClose }) =
             value={commandInput}
             onChange={(e) => setCommandInput(e.target.value)}
             placeholder="Type your command here (e.g. npm run dev, ls, npm install) and press Enter..."
-            className="flex-1 bg-black/50 border border-white/10 rounded-md px-3 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30"
+            className="flex-1 bg-black/50 app-terminal-input border border-white/10 rounded-md px-3 py-1.5 text-xs font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30"
           />
           <button
             type="submit"

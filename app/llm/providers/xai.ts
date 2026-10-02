@@ -1,5 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import type { LanguageModelV1 } from 'ai';
+import type { LanguageModel } from 'ai';
 import type { LLMAdapter, LLMProviderOptions } from '../adapter';
 import type { ModelInfo } from '~/types/model';
 
@@ -17,12 +17,12 @@ export class XAIAdapter implements LLMAdapter {
     ];
   }
 
-  getModel(modelId: string, options?: LLMProviderOptions): LanguageModelV1 {
+  getModel(modelId: string, options?: LLMProviderOptions): LanguageModel {
     const apiKey = options?.apiKey || process.env.GROK_API_KEY || process.env.XAI_API_KEY;
     const client = createOpenAI({
       apiKey,
       baseURL: options?.baseUrl || 'https://api.x.ai/v1',
     });
-    return client(modelId);
+    return client.chat(modelId);
   }
 }

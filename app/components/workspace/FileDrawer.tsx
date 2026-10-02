@@ -11,8 +11,14 @@ import {
   activeProjectDir,
   loadProjectFiles,
   updateFileContent,
+  actionRunner,
 } from '~/stores/workspace';
-import { FileCode, FileText, Folder, FolderOpen, ChevronRight, ChevronDown, X, RefreshCw, Plus } from 'lucide-react';
+import { resetChat } from '~/stores/chat';
+import { CheckpointHistory } from './CheckpointHistory';
+import { FileCode, Folder, FolderOpen, ChevronRight, ChevronDown, RefreshCw, Plus, Search, ExternalLink, Clock3, Blocks, Activity } from 'lucide-react';
+
+type DesktopBridge = { importFolder: () => Promise<{ projectId: string; title: string } | null>; openProjectLocation: (projectId: string) => Promise<string>; openInVsCode: (projectId: string) => Promise<string> };
+const desktopBridge = () => (window as Window & { hedesDesktop?: DesktopBridge }).hedesDesktop;
 
 interface FileNode {
   name: string;
@@ -74,13 +80,14 @@ const getFileIcon = (fileName: string) => {
   return <FileCode className="w-3.5 h-3.5 text-cyan-400 shrink-0" />;
 };
 
-const FileTreeNode: React.FC<{ node: FileNode; depth: number; current: string | null }> = ({ node, depth, current }) => {
-  const [isOpen, setIsOpen] = React.useState(true);
+const FileTreeNode: React.FC<{ node: FileNode; depth: number; current: string | null; onOpen: (path: string) => void }> = ({ node, depth, current, onOpen }) => {
+  const containsActive = current ? current.startsWith(node.path + '/') : false;
+  const [isOpen, setIsOpen] = React.useState(depth < 2 || containsActive);
   
   if (node.type === 'file') {
     return (
       <button
-        onClick={() => selectFile(node.path)}
+        onClick={() => onOpen(node.path)}
         style={{ paddingLeft: `${depth * 12 + 12}px` }}
         className={`w-full flex items-center gap-2 py-1.5 pr-2 rounded-lg text-left transition-colors truncate font-mono text-[11px] ${
           current === node.path
@@ -102,7 +109,7 @@ const FileTreeNode: React.FC<{ node: FileNode; depth: number; current: string | 
   if (node.name === 'root') {
     return (
       <div className="flex flex-col space-y-0.5">
-        {children.map(child => <FileTreeNode key={child.path} node={child} depth={0} current={current} />)}
+        {children.map(child => <FileTreeNode key={child.path} node={child} depth={0} current={current} onOpen={onOpen} />)}
       </div>
     );
   }
@@ -120,7 +127,7 @@ const FileTreeNode: React.FC<{ node: FileNode; depth: number; current: string | 
       </button>
       {isOpen && (
         <div className="flex flex-col space-y-0.5">
-          {children.map(child => <FileTreeNode key={child.path} node={child} depth={depth + 1} current={current} />)}
+          {children.map(child => <FileTreeNode key={child.path} node={child} depth={depth + 1} current={current} onOpen={onOpen} />)}
         </div>
       )}
     </div>
@@ -133,9 +140,36 @@ export const FileDrawer: React.FC = () => {
   const current = useStore(activeFile);
   const activeProj = useStore(activeProjectName);
   const activeDir = useStore(activeProjectDir);
+  const actionStates = useStore(actionRunner.actions);
   const fileKeys = Object.keys(allFiles);
   const fileTree = React.useMemo(() => buildFileTree(fileKeys), [fileKeys]);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [recent, setRecent] = React.useState<string[]>([]);
+  const [tab, setTab] = React.useState<'files' | 'history' | 'activity'>('files');
+
+  React.useEffect(() => {
+    try { setRecent(JSON.parse(localStorage.getItem(`hedes_recent_files_${activeProj}`) || '[]')); }
+    catch { setRecent([]); }
+  }, [activeProj]);
+
+  const openFile = (filePath: string) => {
+    selectFile(filePath);
+    const next = [filePath, ...recent.filter((path) => path !== filePath)].slice(0, 8);
+    setRecent(next);
+    if (activeProj) localStorage.setItem(`hedes_recent_files_${activeProj}`, JSON.stringify(next));
+  };
+
+  const importFolder = async () => {
+    setError('');
+    try {
+      const imported = await desktopBridge()?.importFolder();
+      if (!imported) return;
+      await resetChat({ initialize: false, chatId: imported.projectId });
+      await loadProjectFiles(imported.projectId);
+    } catch (cause) { setError((cause as Error).message); }
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -155,9 +189,9 @@ export const FileDrawer: React.FC = () => {
   };
 
   return (
-    <div className="h-full bg-[#0a0a1a] flex flex-col relative overflow-hidden shrink-0">
+    <div className="h-full app-background flex flex-col relative overflow-hidden shrink-0">
       {/* Drawer Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e3a] bg-[#111128] w-full shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e3a] app-surface w-full shrink-0">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-200 tracking-wide min-w-0">
           <FolderOpen className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="font-mono">EXPLORER</span>
@@ -170,6 +204,7 @@ export const FileDrawer: React.FC = () => {
             >
               <Plus className="w-3 h-3" />
             </button>
+            {typeof window !== 'undefined' && desktopBridge() && <button type="button" onClick={importFolder} className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-cyan-300" title="Choose folder to import as a Hedes project"><FolderOpen className="w-3.5 h-3.5" /></button>}
             <button
               type="button"
               onClick={handleRefresh}
@@ -190,16 +225,31 @@ export const FileDrawer: React.FC = () => {
         )}
       </div>
 
+      <div className="flex border-b border-white/10 p-1 text-xs"><button type="button" onClick={() => setTab('files')} className={`flex-1 rounded-lg py-1.5 ${tab === 'files' ? 'bg-white/10 text-white' : 'text-slate-400'}`}>Files</button><button type="button" onClick={() => setTab('history')} className={`flex-1 rounded-lg py-1.5 ${tab === 'history' ? 'bg-white/10 text-white' : 'text-slate-400'}`}>History</button><button type="button" onClick={() => setTab('activity')} className={`flex-1 rounded-lg py-1.5 ${tab === 'activity' ? 'bg-white/10 text-white' : 'text-slate-400'}`}>Activity</button></div>
+
+      {tab === 'files' && <><div className="space-y-2 border-b border-white/5 p-2">
+        <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/20 px-2.5 text-slate-500"><Search className="h-3.5 w-3.5" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find file" className="min-w-0 w-full bg-transparent py-1.5 text-xs text-slate-200 outline-none" /></label>
+        {activeProj && typeof window !== 'undefined' && desktopBridge() && <button type="button" onClick={() => { void desktopBridge()?.openProjectLocation(activeProj).then((message) => { if (message) setError(message); }).catch((cause) => setError((cause as Error).message)); }} className="flex items-center gap-1.5 text-[11px] text-cyan-300 hover:text-cyan-100"><ExternalLink className="h-3 w-3" />Open folder location</button>}
+        {activeProj && typeof window !== 'undefined' && desktopBridge() && <button type="button" onClick={() => { void desktopBridge()?.openInVsCode(activeProj).then((message) => setError(message)).catch((cause) => setError((cause as Error).message)); }} className="flex items-center gap-1.5 text-[11px] text-violet-300 hover:text-violet-100"><Blocks className="h-3 w-3" />Open in VS Code for extensions</button>}
+        {error && <p role="alert" className="text-[11px] text-rose-300">{error}</p>}
+      </div>
+      {recent.some((path) => path in allFiles) && <div className="border-b border-white/5 p-2"><div className="mb-1 flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500"><Clock3 className="h-3 w-3" />Recent files</div>{recent.filter((path) => path in allFiles).slice(0, 4).map((path) => <button key={path} type="button" onClick={() => openFile(path)} className="block w-full truncate rounded px-2 py-1 text-left text-[11px] text-slate-300 hover:bg-white/5" title={path}>{path}</button>)}</div>}
+
       {/* File Tree */}
       <div className="flex-1 overflow-y-auto p-2 modern-scrollbar w-full">
         {fileKeys.length === 0 ? (
           <div className="p-4 text-center text-slate-500 text-[11px] italic mt-10">
             No files created yet
           </div>
+        ) : search ? (
+          fileKeys.filter((path) => path.toLowerCase().includes(search.toLowerCase())).map((path) => <button key={path} type="button" onClick={() => openFile(path)} className="flex w-full items-center gap-2 truncate rounded-lg px-2 py-1.5 text-left text-[11px] text-slate-300 hover:bg-white/5">{getFileIcon(path)}<span className="truncate">{path}</span></button>)
         ) : (
-          <FileTreeNode node={fileTree} depth={0} current={current} />
+          <FileTreeNode node={fileTree} depth={0} current={current} onOpen={openFile} />
         )}
       </div>
+      </>}
+      {tab === 'history' && <CheckpointHistory />}
+      {tab === 'activity' && <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3"><p className="text-[11px] text-slate-400">Actual file writes and command results from this chat. A completed write does not verify that the app builds.</p>{Object.values(actionStates).length === 0 && <p className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-slate-500">No actions yet.</p>}{Object.values(actionStates).reverse().map((action) => <div key={action.id} className="rounded-lg border border-white/10 bg-black/20 p-2 text-[11px]"><div className="flex items-center gap-1.5"><Activity className={`h-3 w-3 ${action.status === 'failed' ? 'text-rose-400' : action.status === 'complete' ? 'text-emerald-400' : 'text-amber-400'}`} /><span className="min-w-0 flex-1 truncate text-slate-200" title={action.filePath || action.type}>{action.filePath || action.type}</span><span className="text-slate-400">{action.status}</span></div>{action.error && <p className="mt-1 break-words text-rose-300">{action.error}</p>}</div>)}</div>}
     </div>
   );
 };

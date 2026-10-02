@@ -182,7 +182,7 @@ export const ProfileModal: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Enter an interactive chamber where you can converse 1-on-1 with any of the 100 human archetypes (farmers, mechanics, lawyers, beggars, surgeons, students) or broadcast questions to the full Council for multi-perspective debate.
+                  Enter an interactive chamber where you can converse 1-on-1 with any of the 100 AI personas (farmers, mechanics, lawyers, beggars, surgeons, students) or broadcast questions to the full Council for multi-perspective debate.
                 </p>
               </div>
               <button

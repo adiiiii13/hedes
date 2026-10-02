@@ -2,7 +2,7 @@ export const WORK_DIR_NAME = 'project';
 export const WORK_DIR = `/home/${WORK_DIR_NAME}`;
 export const APP_NAME = 'Hedes Studio';
 
-export const MOD_KEY = typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? 'Cmd' : 'Ctrl';
+export const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? 'Cmd' : 'Ctrl';
 
 export const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 export const DEFAULT_PROVIDER = 'Groq';

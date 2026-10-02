@@ -9,3 +9,10 @@ dist
 *.log
 projects/*
 !projects/.gitkeep
+backups
+output/
+scratch/
+.hedes-studio/
+.playwright-cli/
+.react-router/
+test_voice.js

@@ -2,21 +2,37 @@ import { ipcRenderer, contextBridge, type IpcRendererEvent } from 'electron';
 
 console.debug('start preload.', ipcRenderer);
 
-const ipc = {
-  invoke(...args: any[]) {
-    return ipcRenderer.invoke('ipcTest', ...args);
-  },
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-  on(channel: string, func: Function) {
-    const f = (event: IpcRendererEvent, ...args: any[]) => func(...[event, ...args]);
-    console.debug('register listener', channel, f);
-    ipcRenderer.on(channel, f);
+export interface HedesDesktopBridge {
+  getSessionToken: () => Promise<string>;
+  getUpdaterStatus: () => Promise<{ status: string; currentVersion: string; availableVersion?: string; progressPercent?: number; error?: string }>;
+  checkForUpdates: () => Promise<{ status: string; currentVersion: string; availableVersion?: string; progressPercent?: number; error?: string }>;
+  importFolder: () => Promise<{ projectId: string; title: string } | null>;
+  openProjectLocation: (projectId: string) => Promise<string>;
+  openInVsCode: (projectId: string) => Promise<string>;
+  voiceRecognize: () => Promise<string>;
+  voiceSpeak: (text: string) => Promise<string>;
+  voiceStop: () => Promise<void>;
+}
 
-    return () => {
-      console.debug('remove listener', channel, f);
-      ipcRenderer.removeListener(channel, f);
-    };
+const hedesDesktop: HedesDesktopBridge = {
+  getSessionToken: () => ipcRenderer.invoke('desktop:getSessionToken'),
+  getUpdaterStatus: () => ipcRenderer.invoke('desktop:getUpdaterStatus'),
+  checkForUpdates: () => ipcRenderer.invoke('desktop:checkForUpdates'),
+  importFolder: () => ipcRenderer.invoke('desktop:importFolder'),
+  openProjectLocation: (projectId: string) => {
+    if (typeof projectId !== 'string') throw new Error('Invalid project ID');
+    return ipcRenderer.invoke('desktop:openProjectLocation', projectId);
   },
+  openInVsCode: (projectId: string) => {
+    if (typeof projectId !== 'string') throw new Error('Invalid project ID');
+    return ipcRenderer.invoke('desktop:openInVsCode', projectId);
+  },
+  voiceRecognize: () => ipcRenderer.invoke('desktop:voiceRecognize'),
+  voiceSpeak: (text: string) => {
+    if (typeof text !== 'string') throw new Error('Text must be a string');
+    return ipcRenderer.invoke('desktop:voiceSpeak', text.slice(0, 10000));
+  },
+  voiceStop: () => ipcRenderer.invoke('desktop:voiceStop'),
 };
 
-contextBridge.exposeInMainWorld('ipc', ipc);
+contextBridge.exposeInMainWorld('hedesDesktop', hedesDesktop);

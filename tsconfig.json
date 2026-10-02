@@ -14,7 +14,7 @@
   ],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "types": ["@remix-run/node", "vite/client", "node"],
+    "types": ["vite/client", "node"],
     "isolatedModules": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
@@ -30,6 +30,7 @@
     "paths": {
       "~/*": ["./app/*"]
     },
+    "allowImportingTsExtensions": true,
     "noEmit": true
   }
 }

@@ -1,4 +1,4 @@
-import { vitePlugin as remixVitePlugin } from '@remix-run/dev';
+import { reactRouter } from '@react-router/dev/vite';
 import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -13,6 +13,8 @@ export default defineConfig(() => {
     },
     ssr: {
       noExternal: true,
+      // Electron is supplied by the runtime. Bundling its npm installer shim crashes SSR.
+      external: ['electron'],
     },
     resolve: {
       alias: {
@@ -36,15 +38,7 @@ export default defineConfig(() => {
         },
         exclude: ['child_process', 'fs', 'path', 'stream', 'util'],
       }),
-      remixVitePlugin({
-        future: {
-          v3_fetcherPersist: true,
-          v3_relativeSplatPath: true,
-          v3_throwAbortReason: true,
-          v3_lazyRouteDiscovery: true,
-        },
-        serverModuleFormat: 'esm',
-      }),
+      reactRouter(),
       tsconfigPaths(),
 
       // Force SSR build into a single chunk for Electron ASAR compatibility
@@ -87,11 +81,6 @@ export default defineConfig(() => {
               console.log(`[ssr-merge-chunks] Merging ${chunkName} into index.js for ASAR compatibility...`);
               indexContent = fs.readFileSync(chunkPath, 'utf-8');
             }
-          }
-
-          // Ensure self polyfill is at the top of the server bundle
-          if (!indexContent.includes('globalThis.self = globalThis')) {
-            indexContent = 'if (typeof self === "undefined") { globalThis.self = globalThis; }\n' + indexContent;
           }
 
           fs.writeFileSync(indexPath, indexContent, 'utf-8');

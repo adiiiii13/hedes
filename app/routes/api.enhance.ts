@@ -1,41 +1,34 @@
-import { type ActionFunctionArgs } from '@remix-run/node';
+import { type ActionFunctionArgs } from 'react-router';
 import { generateText } from 'ai';
 import { providerRegistry } from '~/llm/registry';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from '~/utils/constants';
+import { rejectCrossOrigin } from '~/utils/local-request.server';
 
-function resolveServerApiKey(provider: string, clientKey?: string): string | undefined {
-  if (clientKey && clientKey.trim()) return clientKey.trim();
-
-  const p = provider.toLowerCase();
-  if (p === 'groq') return process.env.GROQ_API_KEY;
-  if (p === 'grok' || p === 'xai') return process.env.GROK_API_KEY || process.env.XAI_API_KEY;
-  if (p === 'openai') return process.env.OPENAI_API_KEY;
-  if (p === 'anthropic') return process.env.ANTHROPIC_API_KEY;
-  if (p === 'google') return process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  if (p === 'openrouter') return process.env.OPENROUTER_API_KEY;
-
-  return undefined;
-}
+import { resolveModelKey } from '~/utils/vault.server.ts';
 
 export async function action({ request }: ActionFunctionArgs) {
+  const rejected = rejectCrossOrigin(request);
+  if (rejected) return rejected;
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
   try {
+    const body = await request.json();
     const {
       prompt,
       provider = DEFAULT_PROVIDER,
       model = DEFAULT_MODEL,
       apiKey,
+      credentialId,
       customProviders,
-    } = await request.json();
+    } = body;
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Prompt is required' }), { status: 400 });
     }
 
-    const resolvedApiKey = resolveServerApiKey(provider, apiKey);
+    const resolvedApiKey = await resolveModelKey(provider, apiKey, credentialId);
 
     const languageModel = providerRegistry.getModel(
       provider,
@@ -56,7 +49,7 @@ Rules:
 5. Keep the enhanced prompt concise, structured with clean markdown bullet points, and directly usable as an input for an AI web application generator.
 6. Do NOT write boilerplate code or preamble like "Here is the prompt:". Output ONLY the enhanced prompt itself.`,
       prompt: `Original idea: ${prompt}`,
-      maxTokens: 1000,
+      maxOutputTokens: 1000,
       temperature: 0.7,
     });
 

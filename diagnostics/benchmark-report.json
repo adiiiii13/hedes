@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-10-01T19:07:38.414Z",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "cpus": 12,
+    "nodeVersion": "v24.14.1"
+  },
+  "metrics": {
+    "fileIndexingDurationMs": 11,
+    "tenThousandFilesSearchMatches": 200,
+    "fiftyThousandMessagesSerializationMs": 102,
+    "terminalOutputThroughputBytes": 8188900,
+    "terminalStreamingDurationMs": 56,
+    "hundredBotCouncilDurationMs": 23,
+    "firstUsefulReplyLatencyMs": 5,
+    "memoryRssDeltaMb": 59
+  }
+}

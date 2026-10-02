@@ -1,4 +1,5 @@
 export interface ProviderInfo {
+  id: string;
   name: string;
   staticModels: ModelInfo[];
   getApiKeyLink?: string;
@@ -20,6 +21,7 @@ export interface CustomProviderConfig {
   baseUrl: string;
   apiKey?: string;
   modelId: string;
+  detectedModels?: string[];
   label?: string;
   enabled: boolean;
   createdAt: number;

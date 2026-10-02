@@ -69,7 +69,7 @@ export const MessageList: React.FC = () => {
               key={label}
               type="button"
               onClick={() => chatInput.set(prompt)}
-              className="flex items-center gap-2 p-2.5 rounded-xl bg-[#121226] border border-[#1e1e38] hover:border-emerald-500/30 hover:bg-[#161630] transition-all text-left text-xs group cursor-pointer"
+              className="flex items-center gap-2 p-2.5 rounded-xl app-surface border border-[#1e1e38] hover:border-emerald-500/30 hover:brightness-125 transition-all text-left text-xs group cursor-pointer"
             >
               <Icon className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
               <span className="text-slate-300 group-hover:text-white truncate font-medium">{label}</span>

@@ -1,5 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import type { LanguageModelV1 } from 'ai';
+import type { LanguageModel } from 'ai';
 import type { LLMAdapter, LLMProviderOptions } from '../adapter';
 import type { ModelInfo } from '~/types/model';
 
@@ -17,7 +17,7 @@ export class AnthropicAdapter implements LLMAdapter {
     ];
   }
 
-  getModel(modelId: string, options?: LLMProviderOptions): LanguageModelV1 {
+  getModel(modelId: string, options?: LLMProviderOptions): LanguageModel {
     const apiKey = options?.apiKey || process.env.ANTHROPIC_API_KEY;
     const client = createAnthropic({
       apiKey,

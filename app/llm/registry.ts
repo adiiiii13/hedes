@@ -1,17 +1,17 @@
-import type { LanguageModelV1 } from 'ai';
-import type { LLMAdapter, LLMProviderOptions } from './adapter';
-import { GroqAdapter } from './providers/groq';
-import { XAIAdapter } from './providers/xai';
-import { OpenAIAdapter } from './providers/openai';
-import { AnthropicAdapter } from './providers/anthropic';
-import { GoogleAdapter } from './providers/google';
-import { OllamaAdapter } from './providers/ollama';
-import { OpenRouterAdapter } from './providers/openrouter';
-import { DeepSeekAdapter } from './providers/deepseek';
-import { MistralAdapter } from './providers/mistral';
-import { TogetherAdapter } from './providers/together';
-import { CustomProviderAdapter } from './custom-provider';
-import type { CustomProviderConfig, ModelInfo, ProviderInfo } from '~/types/model';
+import type { LanguageModel } from 'ai';
+import type { LLMAdapter, LLMProviderOptions } from './adapter.ts';
+import { GroqAdapter } from './providers/groq.ts';
+import { XAIAdapter } from './providers/xai.ts';
+import { OpenAIAdapter } from './providers/openai.ts';
+import { AnthropicAdapter } from './providers/anthropic.ts';
+import { GoogleAdapter } from './providers/google.ts';
+import { OllamaAdapter } from './providers/ollama.ts';
+import { OpenRouterAdapter } from './providers/openrouter.ts';
+import { DeepSeekAdapter } from './providers/deepseek.ts';
+import { MistralAdapter } from './providers/mistral.ts';
+import { TogetherAdapter } from './providers/together.ts';
+import { CustomProviderAdapter } from './custom-provider.ts';
+import type { CustomProviderConfig, ModelInfo, ProviderInfo } from '../types/model.ts';
 
 class ProviderRegistry {
   private builtInAdapters: Map<string, LLMAdapter> = new Map();
@@ -35,6 +35,8 @@ class ProviderRegistry {
 
   getAdapter(providerId: string, customConfigs: CustomProviderConfig[] = []): LLMAdapter | null {
     let key = providerId.toLowerCase();
+    const custom = customConfigs.find((c) => c.id.toLowerCase() === key || c.name.toLowerCase() === key);
+    if (custom) return new CustomProviderAdapter(custom);
     if (key === 'xai') key = 'grok';
     if (key === 'ollama (local)' || key === 'local' || key.includes('ollama')) key = 'ollama';
     if (key.includes('deepseek')) key = 'deepseek';
@@ -42,11 +44,6 @@ class ProviderRegistry {
     if (key.includes('together')) key = 'together';
     if (this.builtInAdapters.has(key)) {
       return this.builtInAdapters.get(key)!;
-    }
-
-    const custom = customConfigs.find((c) => c.id.toLowerCase() === key || c.name.toLowerCase() === key);
-    if (custom) {
-      return new CustomProviderAdapter(custom);
     }
 
     return null;
@@ -57,12 +54,10 @@ class ProviderRegistry {
     modelId: string,
     options?: LLMProviderOptions,
     customConfigs: CustomProviderConfig[] = [],
-  ): LanguageModelV1 {
+  ): LanguageModel {
     const adapter = this.getAdapter(providerId, customConfigs);
     if (!adapter) {
-      // Fallback: if it's an unrecognized provider, assume standard OpenAI adapter or default OpenAI
-      const fallback = this.builtInAdapters.get('openai')!;
-      return fallback.getModel(modelId, options);
+      throw new Error(`Unknown AI provider: ${providerId}`);
     }
     return adapter.getModel(modelId, options);
   }
@@ -72,6 +67,7 @@ class ProviderRegistry {
 
     for (const adapter of this.builtInAdapters.values()) {
       list.push({
+        id: adapter.id,
         name: adapter.name,
         staticModels: adapter.getStaticModels(),
         getApiKeyLink: adapter.getApiKeyLink,
@@ -83,6 +79,7 @@ class ProviderRegistry {
       if (!custom.enabled) continue;
       const customAdapter = new CustomProviderAdapter(custom);
       list.push({
+        id: custom.id,
         name: custom.name,
         staticModels: customAdapter.getStaticModels(),
         icon: 'Cpu',

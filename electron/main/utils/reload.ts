@@ -9,6 +9,7 @@ const abort = new AbortController();
 const { signal } = abort;
 
 export async function reloadOnChange() {
+  if (app.isPackaged) return;
   const dir = path.join(app.getAppPath(), 'build', 'electron');
 
   try {

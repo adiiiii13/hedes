@@ -20,7 +20,7 @@ export const ModelPicker: React.FC = () => {
 
   const rawProviders = providerRegistry.getAllProviders(customs);
   const providers = rawProviders.map((p) => {
-    if (p.name.toLowerCase().includes('ollama') && localOllama.length > 0) {
+    if (p.id.toLowerCase() === 'ollama' && localOllama.length > 0) {
       return {
         ...p,
         staticModels: localOllama.map((m) => ({
@@ -104,15 +104,15 @@ export const ModelPicker: React.FC = () => {
                   </div>
                   <div className="flex flex-col gap-0.5">
                     {p.staticModels.map((m) => {
-                      const isLocal = p.name.toLowerCase().includes('ollama');
+                      const isLocal = p.id.toLowerCase() === 'ollama';
                       const isFree = m.name.endsWith(':free') || m.label?.toLowerCase().includes('(free)');
                       const isCustom = Boolean((m as any).isCustom);
                       return (
                         <button
                           key={m.name}
-                          onClick={() => handleSelect(p.name, m.name)}
+                          onClick={() => handleSelect(p.id, m.name)}
                           className={`text-left px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-between gap-2 ${
-                            currentProvider === p.name && currentModel === m.name
+                            currentProvider === p.id && currentModel === m.name
                               ? 'bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/40'
                               : 'text-slate-300 hover:bg-white/5 hover:text-white'
                           }`}

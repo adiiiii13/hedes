@@ -1,4 +1,4 @@
-import type { LanguageModelV1 } from 'ai';
+import type { LanguageModel } from 'ai';
 import type { ModelInfo } from '~/types/model';
 
 export interface LLMProviderOptions {
@@ -13,7 +13,7 @@ export interface LLMAdapter {
   readonly defaultBaseUrl?: string;
   readonly getApiKeyLink?: string;
 
-  getModel(modelId: string, options?: LLMProviderOptions): LanguageModelV1;
+  getModel(modelId: string, options?: LLMProviderOptions): LanguageModel;
   getStaticModels(): ModelInfo[];
   fetchDynamicModels?(options?: LLMProviderOptions): Promise<ModelInfo[]>;
 }

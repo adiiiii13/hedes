@@ -1,4 +1,4 @@
-export type ActionType = 'file' | 'shell' | 'start';
+export type ActionType = 'file' | 'shell' | 'start' | 'delete' | 'terminal';
 
 export interface ActionAlert {
   type: 'preview' | 'terminal' | 'action';
@@ -12,11 +12,14 @@ export interface HedesActionData {
   type: ActionType;
   content: string;
   filePath?: string;
+  projectId?: string;
+  runId?: string;
+  payloadHash?: string;
 }
 
 export interface HedesAction extends HedesActionData {
   id: string;
-  status: 'pending' | 'running' | 'complete' | 'failed';
+  status: 'pending' | 'running' | 'complete' | 'failed' | 'interrupted' | 'awaiting-approval';
   error?: string;
 }
 

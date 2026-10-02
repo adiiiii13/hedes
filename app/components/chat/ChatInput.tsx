@@ -9,15 +9,16 @@ import {
   flushParser,
   persistCurrentChat,
   currentChatId,
+  runInChatTerminal,
   type ChatMessage,
 } from '~/stores/chat';
-import { activeModel, activeProvider, apiKeys, customProviders, customSystemPrompt } from '~/stores/settings';
+import { activeModel, activeProvider, apiKeys, customProviders, customSystemPrompt, ollamaBaseUrl } from '~/stores/settings';
 import { terminalErrorAtom, files, workspaceViewMode, previewUrl, loadProjectFiles } from '~/stores/workspace';
 import { triggerHiveMindSwarm } from '~/stores/hive';
 import { userProfileStore } from '~/stores/profile';
 import { ModelPicker } from './ModelPicker';
 import { GlowButton } from '~/components/ui/GlowButton';
-import { ArrowUp, Sparkles, StopCircle, Github, Loader2, Image as ImageIcon, X, Wrench } from 'lucide-react';
+import { ArrowUp, Sparkles, StopCircle, Github, Loader2, Image as ImageIcon, X, Wrench, Terminal } from 'lucide-react';
 
 export const ChatInput: React.FC = () => {
   const input = useStore(chatInput);
@@ -176,25 +177,61 @@ export const ChatInput: React.FC = () => {
   useEffect(() => {
     if (shouldAutoSend) {
       setShouldAutoSend(false);
-      handleSend();
+      handleSend(chatInput.get());
     }
   }, [shouldAutoSend]);
 
   useEffect(() => {
     const handleTriggerChat = (e: Event) => {
       const customEvent = e as CustomEvent<string>;
-      if (customEvent.detail) {
-        chatInput.set(customEvent.detail);
-        setShouldAutoSend(true);
+      const text = customEvent.detail?.trim();
+      if (text) {
+        chatInput.set(text);
+        handleSend(text);
       }
     };
     window.addEventListener('trigger-chat', handleTriggerChat);
     return () => window.removeEventListener('trigger-chat', handleTriggerChat);
-  }, []);
+  }, [generating, input, attachedImages, provider, model, keys, customs, workspaceFiles, customPrompt, swarmMode]);
 
-  const handleSend = async () => {
-    const trimmed = input.trim();
+  const handleSend = async (promptOverride?: string) => {
+    const rawText = typeof promptOverride === 'string' ? promptOverride : (input || chatInput.get());
+    const trimmed = rawText.trim();
     if ((!trimmed && attachedImages.length === 0) || generating) return;
+
+    // Check if user requested direct in-chat terminal execution (Antigravity-style)
+    const isDirectTerminal =
+      trimmed.startsWith('$') ||
+      trimmed.startsWith('> ') ||
+      trimmed.startsWith('/sh ') ||
+      trimmed.startsWith('/terminal ') ||
+      trimmed.startsWith('/term ') ||
+      trimmed.startsWith('⚡ ');
+
+    if (isDirectTerminal && attachedImages.length === 0) {
+      chatInput.set('');
+      let cleanCmd = trimmed;
+      let isSystem = false;
+
+      if (cleanCmd.startsWith('⚡ ')) {
+        cleanCmd = cleanCmd.slice(2).trim();
+        isSystem = true;
+      } else if (cleanCmd.startsWith('/terminal ') || cleanCmd.startsWith('/term ')) {
+        cleanCmd = cleanCmd.replace(/^\/(?:terminal|term)\s+/, '').trim();
+        isSystem = true;
+      } else if (cleanCmd.startsWith('/sh ')) {
+        cleanCmd = cleanCmd.slice(4).trim();
+      } else if (cleanCmd.startsWith('$ ')) {
+        cleanCmd = cleanCmd.slice(2).trim();
+      } else if (cleanCmd.startsWith('$')) {
+        cleanCmd = cleanCmd.slice(1).trim();
+      } else if (cleanCmd.startsWith('> ')) {
+        cleanCmd = cleanCmd.slice(2).trim();
+      }
+
+      runInChatTerminal(cleanCmd, isSystem);
+      return;
+    }
 
     // Check if user specifically requested live preview
     const isPreviewRequest = /^(?:show\s+(?:on\s+)?live\s+preview|show\s+preview|open\s+(?:live\s+)?preview|preview|run\s+preview)$/i.test(trimmed) ||
@@ -228,7 +265,7 @@ export const ChatInput: React.FC = () => {
     let consensusPlan = '';
     if (swarmMode) {
       try {
-        consensusPlan = await triggerHiveMindSwarm(finalPrompt);
+        consensusPlan = await triggerHiveMindSwarm(finalPrompt, { provider, model, chatId: currentChatId.get(), apiKey: keys[provider] || '', customProviders: customs, ollamaBaseUrl: ollamaBaseUrl.get() });
       } catch (err) {
         console.error('Swarm error', err);
       }
@@ -364,7 +401,7 @@ export const ChatInput: React.FC = () => {
               <div className={`absolute left-[2px] top-[2px] bg-white w-3 h-3 rounded-full transition-transform ${swarmMode ? 'translate-x-3' : 'translate-x-0'}`}></div>
             </div>
             <span className={`text-[10px] font-mono tracking-wider font-semibold transition-colors ${swarmMode ? 'text-emerald-400' : 'text-slate-400'}`}>
-              SWARM
+              100 Bots
             </span>
           </label>
         </div>
@@ -411,13 +448,13 @@ export const ChatInput: React.FC = () => {
 
         {/* Card Bottom Toolbar */}
         <div className="px-2.5 pb-2 pt-1 flex items-center justify-between gap-2">
-          {/* Action Tools */}
-          <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Action Tools: Clean single row (previous design restored) */}
+          <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={handleGithubImport}
               disabled={isImporting || generating}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/10 text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/10 text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm shrink-0"
               title="Clone & import a GitHub repository"
             >
               {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" /> : <Github className="w-3.5 h-3.5 text-slate-400" />}
@@ -428,7 +465,7 @@ export const ChatInput: React.FC = () => {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={generating}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 border border-purple-500/25 text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_0_10px_rgba(168,85,247,0.12)]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 border border-purple-500/25 text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_0_10px_rgba(168,85,247,0.12)] shrink-0"
               title="Upload mockup, UI screenshot or photo for AI code generation"
             >
               <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
@@ -442,7 +479,7 @@ export const ChatInput: React.FC = () => {
                 setShouldAutoSend(true);
               }}
               disabled={generating}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-amber-500/25 text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.12)]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-amber-500/25 text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.12)] shrink-0"
               title="Analyze project files and auto-repair errors"
             >
               <Wrench className="w-3.5 h-3.5 text-amber-400" />
@@ -453,7 +490,7 @@ export const ChatInput: React.FC = () => {
               type="button"
               onClick={handleEnhancePrompt}
               disabled={!input.trim() || isEnhancing || generating}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-cyan-200 border border-cyan-500/25 text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.12)]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-cyan-200 border border-cyan-500/25 text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.12)] shrink-0"
               title="Expand prompt into full technical architecture specification"
             >
               {isEnhancing ? (
@@ -479,7 +516,7 @@ export const ChatInput: React.FC = () => {
             ) : (
               <button
                 type="button"
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={!input.trim() && attachedImages.length === 0}
                 className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 disabled:from-white/5 disabled:to-white/5 text-[#0a0a1a] disabled:text-slate-500 flex items-center justify-center shadow-[0_0_16px_rgba(16,185,129,0.35)] disabled:shadow-none transition-all cursor-pointer disabled:cursor-not-allowed"
                 title="Send prompt (Enter)"
@@ -491,77 +528,6 @@ export const ChatInput: React.FC = () => {
         </div>
       </div>
 
-      {/* Action Chips & Shortcuts Row */}
-      <div className="flex items-center justify-between gap-2 pt-0.5">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          <button 
-            type="button"
-            onClick={() => {
-              chatInput.set("⚡ Auto-Fix: Please analyze the project and terminal logs to resolve all issues.");
-              setShouldAutoSend(true);
-            }}
-            className="px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 text-[10px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer"
-            title="Analyze errors and auto-repair codebase"
-          >
-            ⚡ /fix
-          </button>
-          <button 
-            type="button"
-            onClick={() => {
-              chatInput.set("Create a modern, full-featured Flutter mobile application with Material 3 design, responsive screens, animations, pubspec.yaml, and clean state management.");
-            }}
-            className="px-2.5 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/20 text-[10px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer"
-            title="Scaffold a Flutter cross-platform mobile app"
-          >
-            🎯 /flutter
-          </button>
-          <button 
-            type="button"
-            onClick={() => {
-              chatInput.set("Create a production-grade web application with responsive UI, sleek animations, and modern components.");
-            }}
-            className="px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 text-[10px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer"
-            title="Scaffold a modern web application"
-          >
-            🌐 /web
-          </button>
-          <button 
-            type="button"
-            onClick={() => {
-              chatInput.set("Create a Python backend application with FastAPI, clean endpoints, and modular structure.");
-            }}
-            className="px-2.5 py-1 rounded-full bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border border-yellow-500/20 text-[10px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer"
-            title="Scaffold a Python application"
-          >
-            🐍 /python
-          </button>
-          <button 
-            type="button"
-            onClick={() => chatInput.set("/component Create a modular, responsive component with polished UI")}
-            className="px-2.5 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] text-[10px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer"
-            title="Generate a reusable component"
-          >
-            /component
-          </button>
-          <button 
-            type="button"
-            onClick={() => chatInput.set("/refactor Optimize code structure, remove redundancy, and enhance performance")}
-            className="px-2.5 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.08] text-[10px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer"
-            title="Refactor and optimize code"
-          >
-            /refactor
-          </button>
-        </div>
-
-        <div className="hidden lg:flex items-center gap-1.5 text-[10px] text-slate-500 shrink-0 font-medium select-none">
-          <span>Ctrl+V image</span>
-          <span>•</span>
-          <span>↵ send</span>
-          <span>•</span>
-          <span>Shift+↵ line</span>
-        </div>
-      </div>
     </div>
   );
 };
-

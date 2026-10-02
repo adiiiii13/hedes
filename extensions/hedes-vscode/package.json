@@ -1,0 +1,47 @@
+{
+  "name": "hedes-companion",
+  "displayName": "Hedes Studio Companion",
+  "description": "Seamless bridge between VS Code and local Hedes Studio for diagnostics and AI pairing.",
+  "version": "1.0.0",
+  "publisher": "hedes",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "hedes.openStudio",
+        "title": "Hedes: Open Studio"
+      },
+      {
+        "command": "hedes.sendDiagnostics",
+        "title": "Hedes: Send Current Diagnostics"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Hedes Studio Companion",
+      "properties": {
+        "hedes.bridgeUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:4200/api/local/vscode",
+          "description": "URL to the local Hedes Studio bridge endpoint."
+        },
+        "hedes.autoSyncDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically forward diagnostics to Hedes on file save."
+        }
+      }
+    }
+  }
+}

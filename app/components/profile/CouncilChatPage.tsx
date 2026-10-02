@@ -13,7 +13,7 @@ import {
 } from '~/stores/profile';
 import { humanPersonasStore } from '~/stores/hive';
 import { HUMAN_PERSONAS_100, type HumanPersona } from '~/engine/personifications';
-import { activeModel, activeProvider, apiKeys } from '~/stores/settings';
+import { activeModel, activeProvider, apiKeys, customProviders, ollamaBaseUrl } from '~/stores/settings';
 import {
   X,
   Send,
@@ -60,6 +60,8 @@ export const CouncilChatPage: React.FC = () => {
   const model = useStore(activeModel);
   const provider = useStore(activeProvider);
   const keys = useStore(apiKeys);
+  const customs = useStore(customProviders);
+  const localModelUrl = useStore(ollamaBaseUrl);
 
   const activeSessionId = useStore(activeCouncilSessionId);
   const savedSessions = useStore(councilSessionsStore);
@@ -152,11 +154,11 @@ export const CouncilChatPage: React.FC = () => {
         {
           id: 'welcome-1',
           sender: 'council',
-          personaName: '100-Human Council Moderator',
+          personaName: '100-Agent Council Moderator',
           personaRole: 'World Assembly Moderator',
           personaAvatar: '🏛️',
           personaColor: '#6366f1',
-          text: `Welcome, ${profile.name} (${profile.role}). You have entered the 100-Human Council Deliberation Forum.\n\nHere, all 100 human archetypes—from farmers, mechanics, and accountants to trial lawyers, street beggars, trauma surgeons, and students—stand ready to deliberate. Ask any engineering dilemma, product idea, or ethical challenge, and our diverse human assembly will debate the best real-world solution for your perspective.`,
+          text: `Welcome, ${profile.name} (${profile.role}). You have entered the 100-Agent Council Deliberation Forum.\n\nHere, all 100 AI personas—from farmers, mechanics, and accountants to trial lawyers, street beggars, trauma surgeons, and students—stand ready to deliberate. Ask any engineering dilemma, product idea, or ethical challenge, and our diverse AI persona council will debate the best real-world solution for your perspective.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -271,6 +273,8 @@ export const CouncilChatPage: React.FC = () => {
           model,
           provider,
           apiKey: keys[provider],
+          customProviders: customs,
+          ollamaBaseUrl: localModelUrl,
         }),
       });
 
@@ -304,22 +308,13 @@ export const CouncilChatPage: React.FC = () => {
         .trim();
 
       // Intercept any raw SDK error strings or empty output
-      if (
-        !replyContent ||
-        replyContent.includes('3:"An error occurred') ||
-        replyContent.includes('An error occurred.')
-      ) {
-        replyContent =
-          chatMode === 'direct'
-            ? `Speaking as ${currentPersona.archetype} (${currentPersona.role}): Regarding your question "${text}", from my lived perspective:\n\n"${currentPersona.prompt}"\n\nWe must make sure whatever we construct works under actual pressure, respects human dignity, and maintains absolute clarity.`
-            : `### 🌾 Kisan Patel (Organic Farmer)\n"Regarding '${text}', if this doesn't work when the internet is spotty or the sunlight is glaring on the screen, it won't help us in the field. Build it offline-first with high-contrast text."\n\n### 🔧 Devraj Sharma (Master Auto Mechanic)\n"Give me modular components and explicit error codes so if a part breaks, anyone with a wrench can swap it in 10 minutes."\n\n### ⚖️ Advocate Vikram Mehta (Senior Trial Lawyer)\n"We must ensure complete transparency, explicit user consent, and clear audit trails so ${profile.name} faces zero regulatory liabilities."\n\n### 🏛️ Marcus Vance (Street Beggar & Urban Philosopher)\n"Make sure ordinary people without fancy credentials or credit cards can use this freely. Real technology empowers the most vulnerable first with dignity."\n\n### ⚖️ Council Consensus & Actionable Verdict\nThe 100-Human Council consensus recommends addressing ${profile.name}'s objective with a resilient offline-first core, transparent diagnostic logging, strict privacy compliance, and completely open, accessible entry points with zero hidden traps.`;
-      }
+      if (!replyContent || replyContent.includes('An error occurred.')) throw new Error('Model returned an empty or invalid response');
 
       const aiMsg: CouncilMessage = {
         id: `ai-${Date.now()}`,
         sender: chatMode === 'direct' ? 'persona' : 'council',
         personaId: currentPersona.id,
-        personaName: chatMode === 'direct' ? currentPersona.name : '100-Human Council Deliberation',
+        personaName: chatMode === 'direct' ? currentPersona.name : '100-Agent Council Deliberation',
         personaRole: chatMode === 'direct' ? currentPersona.role : 'Multi-Perspective Synthesis',
         personaAvatar: chatMode === 'direct' ? currentPersona.avatar : '🏛️',
         personaColor: chatMode === 'direct' ? currentPersona.color : '#818cf8',
@@ -330,19 +325,16 @@ export const CouncilChatPage: React.FC = () => {
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err: any) {
       console.error('Council chat error:', err);
-      // Fallback realistic response so conversation never fails
+      // Show the actual connection error; never fabricate a persona response.
       const fallbackMsg: CouncilMessage = {
         id: `fallback-${Date.now()}`,
         sender: chatMode === 'direct' ? 'persona' : 'council',
         personaId: currentPersona.id,
-        personaName: chatMode === 'direct' ? currentPersona.name : '100-Human Council Deliberation',
+        personaName: chatMode === 'direct' ? currentPersona.name : '100-Agent Council Deliberation',
         personaRole: chatMode === 'direct' ? currentPersona.role : 'Multi-Perspective Synthesis',
         personaAvatar: chatMode === 'direct' ? currentPersona.avatar : '🏛️',
         personaColor: chatMode === 'direct' ? currentPersona.color : '#818cf8',
-        text:
-          chatMode === 'direct'
-            ? `Speaking as ${currentPersona.archetype} (${currentPersona.role}): Regarding your question "${text}", from my lived perspective: ${currentPersona.prompt} We must make sure whatever we construct works under actual pressure, respects human dignity, and maintains absolute clarity.`
-            : `### 🌾 Kisan Patel (Organic Farmer)\n"For '${text}', if this doesn't work when the internet is spotty or the sunlight is glaring on the screen, it won't help us in the field."\n\n### 🔧 Devraj Sharma (Master Auto Mechanic)\n"Give me modular components and explicit error codes so if a part breaks, anyone with a wrench can swap it in 10 minutes."\n\n### ⚖️ Advocate Vikram Mehta (Senior Trial Lawyer)\n"We must ensure complete transparency, explicit user consent, and clear audit trails so ${profile.name} faces zero regulatory liabilities."\n\n### 🏛️ Marcus Vance (Street Beggar & Urban Philosopher)\n"Make sure ordinary people without fancy credentials or credit cards can use this freely. Real technology empowers the most vulnerable first."\n\n### ⚖️ Council Consensus & Actionable Verdict\nThe Council recommends building with an offline-first resilient architecture, modular diagnostics, explicit privacy policies, and universal zero-barrier accessibility.`,
+        text: `Model request failed: ${err.message || String(err)}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -396,10 +388,10 @@ export const CouncilChatPage: React.FC = () => {
   };
 
   const handleExportSession = (session: CouncilSessionRecord) => {
-    let md = `# 100-Human Council Deliberation: ${session.title}\n\n`;
+    let md = `# 100-Agent Council Deliberation: ${session.title}\n\n`;
     md += `- **Session ID:** ${session.id}\n`;
     md += `- **Date:** ${new Date(session.updatedAt).toLocaleString()}\n`;
-    md += `- **Mode:** ${session.mode === 'assembly' ? 'Full 100-Human Council Assembly' : `1-on-1 Consultation (${session.personaName || 'Direct'})`}\n\n---\n\n`;
+    md += `- **Mode:** ${session.mode === 'assembly' ? 'Full 100-Agent Council Assembly' : `1-on-1 Consultation (${session.personaName || 'Direct'})`}\n\n---\n\n`;
 
     (session.messages || []).forEach((m) => {
       const senderName = m.sender === 'user' ? profile.name : m.personaName || 'Council';
@@ -445,9 +437,9 @@ export const CouncilChatPage: React.FC = () => {
             </div>
             <div>
               <div className="text-sm font-bold text-white flex items-center gap-2">
-                <span>100-Human Council Forum</span>
+                <span>100-Agent Council Forum</span>
                 <span className="text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.2 rounded-full">
-                  100 Archetypes Online
+                  100 AI Personas Available
                 </span>
               </div>
               <div className="text-[11px] text-slate-400 flex items-center gap-2">
@@ -663,7 +655,7 @@ export const CouncilChatPage: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-xs font-bold text-white flex items-center gap-2">
-                    <span>100-Human Council Deliberation Chamber</span>
+                    <span>100-Agent Council Deliberation Chamber</span>
                     <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30 font-mono">
                       PLENARY SESSION
                     </span>
@@ -781,7 +773,7 @@ export const CouncilChatPage: React.FC = () => {
                   <span>
                     {chatMode === 'direct'
                       ? `${currentPersona.name} is formulating their response...`
-                      : 'The 100-Human Council is deliberating across multiple perspectives...'}
+                      : 'The 100-Agent Council is deliberating across multiple perspectives...'}
                   </span>
                 </div>
               </div>
@@ -850,7 +842,7 @@ export const CouncilChatPage: React.FC = () => {
                   placeholder={
                     chatMode === 'direct'
                       ? `Ask ${currentPersona.name} (${currentPersona.role}) anything from their lived perspective...`
-                      : `Submit a challenge, architecture question, or dilemma to the 100-Human Council...`
+                      : `Submit a challenge, architecture question, or dilemma to the 100-Agent Council...`
                   }
                   rows={2}
                   className="w-full px-4 py-3 bg-transparent text-white text-xs placeholder-slate-500 focus:outline-none resize-none custom-scrollbar"
@@ -876,12 +868,12 @@ export const CouncilChatPage: React.FC = () => {
                     ? 'bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white shadow-indigo-600/30'
                     : 'bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-indigo-600/30'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
-                title={chatMode === 'direct' ? `Consult with ${currentPersona.name}` : 'Deliberate across 100-Human Council Relay'}
+                title={chatMode === 'direct' ? `Consult with ${currentPersona.name}` : 'Deliberate across 100-Agent Council Relay'}
               >
                 {chatMode === 'assembly' ? (
                   <>
                     <Sparkles className="w-4 h-4 text-cyan-200 animate-pulse" />
-                    <span className="hidden sm:inline">Deliberate (100 Humans)</span>
+                    <span className="hidden sm:inline">Deliberate (100 AI Agents)</span>
                     <span className="sm:hidden">Deliberate</span>
                   </>
                 ) : (

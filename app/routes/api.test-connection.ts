@@ -1,14 +1,18 @@
-import { json, type ActionFunctionArgs } from '@remix-run/node';
+import { data as json, type ActionFunctionArgs } from 'react-router';
 import { generateText } from 'ai';
 import { providerRegistry } from '~/llm/registry';
+import { rejectCrossOrigin } from '~/utils/local-request.server';
+import { resolveModelKey } from '~/utils/vault.server.ts';
 
 export async function action({ request }: ActionFunctionArgs) {
+  const rejected = rejectCrossOrigin(request);
+  if (rejected) return rejected;
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, { status: 405 });
   }
 
   try {
-    const { provider, apiKey, model, baseUrl } = await request.json();
+    const { provider, apiKey, model, baseUrl, customProviders } = await request.json();
 
     if (!provider) {
       return json({ ok: false, error: 'Provider is required' }, { status: 400 });
@@ -52,7 +56,7 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     }
 
-    const adapter = providerRegistry.getAdapter(provider);
+    const adapter = providerRegistry.getAdapter(provider, Array.isArray(customProviders) ? customProviders : []);
     if (!adapter) {
       return json({ ok: false, error: `Provider ${provider} not found in registry` }, { status: 400 });
     }
@@ -65,23 +69,25 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     const startTime = Date.now();
-    const languageModel = adapter.getModel(testModel, { apiKey });
+    const finalKey = await resolveModelKey(provider, apiKey, (await request.clone().json().catch(() => ({}))).credentialId);
+    const languageModel = adapter.getModel(testModel, { apiKey: finalKey });
 
     const result = await generateText({
       model: languageModel,
       prompt: 'Respond with exactly the word "pong".',
-      maxTokens: 10,
+      maxOutputTokens: 24,
+      abortSignal: AbortSignal.timeout(15000),
     });
 
     const latency = Date.now() - startTime;
 
     return json({
-      ok: true,
+      ok: Boolean(result.text.trim()),
       provider,
       model: testModel,
       latencyMs: latency,
       sampleResponse: result.text.trim(),
-      message: `Successfully connected to ${provider} (${testModel}) in ${latency}ms!`,
+      message: result.text.trim() ? `Model answered in ${latency}ms.` : 'Model returned an empty response.',
     });
   } catch (err: any) {
     console.error('Test connection error:', err);

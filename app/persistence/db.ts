@@ -2,6 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { CustomProviderConfig } from '~/types/model';
 
 export interface ChatRecord {
+  revision?: number;
   id: string;
   title: string;
   messages: any[];
@@ -141,12 +142,19 @@ export async function deleteCouncilSession(id: string): Promise<void> {
 
 export async function saveCustomModel(config: CustomProviderConfig): Promise<void> {
   const db = await getHedesDB();
-  await db.put('custom_models', config);
+  const safeConfig: CustomProviderConfig = { ...config };
+  delete safeConfig.apiKey;
+  await db.put('custom_models', safeConfig);
 }
 
 export async function listCustomModels(): Promise<CustomProviderConfig[]> {
   const db = await getHedesDB();
-  return db.getAll('custom_models');
+  const list = await db.getAll('custom_models');
+  return list.map((item) => {
+    const safe = { ...item };
+    delete safe.apiKey;
+    return safe;
+  });
 }
 
 export async function deleteCustomModel(id: string): Promise<void> {

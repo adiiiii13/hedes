@@ -17,6 +17,14 @@ export const terminalFontSize = atom<number>(12);
 export const terminalCursorStyle = atom<'bar' | 'block'>('bar');
 export const isSettingsBackendSynced = atom<boolean>(false);
 
+export interface CredentialStatus {
+  configured: boolean;
+  masked: string;
+  updatedAt?: number;
+}
+
+export const vaultCredentials = map<Record<string, CredentialStatus>>({});
+
 export const apiKeys = map<Record<string, string>>({
   Groq: DEFAULT_GROQ_KEY,
 });
@@ -28,16 +36,41 @@ export async function loadInitialSettings() {
   if (typeof window === 'undefined') return;
 
   try {
+    // 1. Load credentials status from secure backend vault
+    try {
+      const vRes = await fetch('/api/local/vault');
+      const vData = await vRes.json();
+      if (vData.ok && vData.credentials) {
+        vaultCredentials.set(vData.credentials);
+      }
+    } catch {}
+
+    // 2. Check for legacy plaintext keys in localStorage and migrate them to secure vault
     const savedKeys = localStorage.getItem('hedes_api_keys');
     if (savedKeys) {
-      const parsed = JSON.parse(savedKeys);
-      if (parsed.Groq === undefined) {
-        parsed.Groq = DEFAULT_GROQ_KEY;
+      try {
+        const parsed = JSON.parse(savedKeys);
+        if (parsed && typeof parsed === 'object') {
+          // Perform atomic migration to vault
+          const migRes = await fetch('/api/local/vault', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'migrate', credentials: parsed }),
+          });
+          const migData = await migRes.json();
+          if (migData.ok) {
+            // Decryption verified and stored in vault: wipe plaintext from localStorage!
+            localStorage.removeItem('hedes_api_keys');
+            const vRes = await fetch('/api/local/vault');
+            const vData = await vRes.json();
+            if (vData.ok && vData.credentials) {
+              vaultCredentials.set(vData.credentials);
+            }
+          }
+        }
+      } catch (migErr) {
+        console.warn('Legacy key migration skipped:', migErr);
       }
-      apiKeys.set(parsed);
-    } else {
-      apiKeys.set({ Groq: DEFAULT_GROQ_KEY });
-      localStorage.setItem('hedes_api_keys', JSON.stringify({ Groq: DEFAULT_GROQ_KEY }));
     }
 
     const savedOllamaUrl = localStorage.getItem('hedes_ollama_base_url');
@@ -112,7 +145,6 @@ export function syncSettingsWithBackend() {
     terminalFontSize: terminalFontSize.get(),
     terminalCursorStyle: terminalCursorStyle.get(),
     customSystemPrompt: customSystemPrompt.get(),
-    apiKeys: apiKeys.get(),
   };
 
   fetch('/api/local/settings', {
@@ -159,13 +191,53 @@ export function setCustomSystemPrompt(prompt: string) {
   }
 }
 
-export function setApiKey(provider: string, key: string) {
-  const current = { ...apiKeys.get(), [provider]: key };
-  apiKeys.set(current);
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('hedes_api_keys', JSON.stringify(current));
-    syncSettingsWithBackend();
+export async function setVaultKey(provider: string, secret: string) {
+  try {
+    const res = await fetch('/api/local/vault', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set', credentialId: provider, secret }),
+    });
+    const data = await res.json();
+    if (data.ok && data.status) {
+      vaultCredentials.set({
+        ...vaultCredentials.get(),
+        [provider]: data.status,
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('hedes_api_keys');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to save vault key:', err);
   }
+}
+
+export async function deleteVaultKey(provider: string) {
+  try {
+    const res = await fetch('/api/local/vault', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', credentialId: provider }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const current = { ...vaultCredentials.get() };
+      delete current[provider];
+      vaultCredentials.set(current);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('hedes_api_keys');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to delete vault key:', err);
+  }
+}
+
+export function setApiKey(provider: string, key: string) {
+  void setVaultKey(provider, key);
+  const current = { ...apiKeys.get(), [provider]: '' };
+  apiKeys.set(current);
 }
 
 export function setActiveModelAndProvider(provider: string, model: string) {
@@ -180,19 +252,27 @@ export function setActiveModelAndProvider(provider: string, model: string) {
 
 export async function addCustomProvider(config: Omit<CustomProviderConfig, 'id' | 'createdAt'>) {
   const id = `custom-${Date.now()}`;
-  const fullConfig: CustomProviderConfig = {
+  if (config.apiKey && config.apiKey.trim()) {
+    await setVaultKey(config.name || id, config.apiKey.trim());
+    await setVaultKey(id, config.apiKey.trim());
+  }
+
+  const safeConfig: CustomProviderConfig = {
     ...config,
     id,
     createdAt: Date.now(),
   };
+  delete safeConfig.apiKey;
 
-  await saveCustomModel(fullConfig);
-  customProviders.set([...customProviders.get(), fullConfig]);
+  await saveCustomModel(safeConfig);
+  customProviders.set([...customProviders.get(), safeConfig]);
   syncSettingsWithBackend();
+  return safeConfig;
 }
 
 export async function removeCustomProvider(id: string) {
   await dbDeleteModel(id);
+  await deleteVaultKey(id);
   customProviders.set(customProviders.get().filter((c: CustomProviderConfig) => c.id !== id));
   syncSettingsWithBackend();
 }
