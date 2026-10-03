@@ -191,34 +191,46 @@ export const FileDrawer: React.FC = () => {
   return (
     <div className="h-full app-background flex flex-col relative overflow-hidden shrink-0">
       {/* Drawer Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e1e3a] app-surface w-full shrink-0">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-200 tracking-wide min-w-0">
-          <FolderOpen className="w-4 h-4 text-emerald-400 shrink-0" />
+      <div className="flex w-full shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1.5 border-b border-[#1e1e3a] app-surface px-2.5 py-2">
+        <div className="flex min-w-0 items-center gap-2 text-xs font-bold tracking-wide text-slate-200">
+          <FolderOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-emerald-400" />
           <span className="font-mono">EXPLORER</span>
-          <div className="flex items-center gap-0.5 ml-1">
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={handleCreateFile}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-slate-400 transition-colors hover:border-white/10 hover:bg-white/10 hover:text-cyan-300 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+            title="New file"
+            aria-label="New file"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+          {typeof window !== 'undefined' && desktopBridge() && (
             <button
               type="button"
-              onClick={handleCreateFile}
-              className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
-              title="New File"
+              onClick={importFolder}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-slate-400 transition-colors hover:border-white/10 hover:bg-white/10 hover:text-cyan-300 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+              title="Choose a folder to import as a HEDES project"
+              aria-label="Choose a folder to import as a HEDES project"
             >
-              <Plus className="w-3 h-3" />
+              <FolderOpen className="h-3.5 w-3.5" />
             </button>
-            {typeof window !== 'undefined' && desktopBridge() && <button type="button" onClick={importFolder} className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-cyan-300" title="Choose folder to import as a Hedes project"><FolderOpen className="w-3.5 h-3.5" /></button>}
-            <button
-              type="button"
-              onClick={handleRefresh}
-              className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
-              title="Refresh Explorer from Disk"
-            >
-              <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
-            </button>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-slate-400 transition-colors hover:border-white/10 hover:bg-white/10 hover:text-emerald-300 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+            title="Refresh files from disk"
+            aria-label="Refresh files from disk"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
+          </button>
         </div>
         {activeProj && (
           <span
-            className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 truncate max-w-[140px]"
-            title={`Project Directory: ${activeDir || `projects/${activeProj}`}`}
+            className="w-full min-w-0 truncate rounded-md border border-emerald-500/15 bg-emerald-500/[0.06] px-2 py-1 font-mono text-[10px] text-emerald-300/90"
+            title={`Project directory: ${activeDir || `projects/${activeProj}`}`}
           >
             {activeProj}
           </span>
