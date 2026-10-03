@@ -24,8 +24,13 @@ export const GlassNavbar: React.FC = () => {
   const currentSaveStatus = useStore(saveStatus);
   const currentSaveError = useStore(lastSaveError);
 
+  React.useLayoutEffect(() => {
+    if ((window as Window & { hedesDesktop?: unknown }).hedesDesktop) {
+      document.documentElement.dataset.desktop = 'on';
+    }
+  }, []);
+
   React.useEffect(() => {
-    if ((window as any).ipc) document.documentElement.dataset.desktop = 'on';
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === '`') {
         e.preventDefault();
