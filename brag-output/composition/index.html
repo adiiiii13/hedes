@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<script src="vendor/gsap.min.js"></script>
+<style>
+@font-face{font-family:"HF Display";src:url("assets/fonts/bahnschrift.ttf");font-weight:100 900;font-style:normal}
+@font-face{font-family:"HF Mono";src:url("assets/fonts/consola.ttf");font-weight:400;font-style:normal}
+@font-face{font-family:"HF Mono";src:url("assets/fonts/consolab.ttf");font-weight:700;font-style:normal}
+:root{--bg:#05070d;--ink:#f2f5fa;--muted:#9fb0c6;--teal:#2ee6c5;--violet:#8b6cff;--ember:#ff8a3d}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+#root{position:relative;width:100%;height:100%;background:var(--bg);color:var(--ink);font-family:"HF Display",sans-serif;overflow:hidden}
+.clip{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}
+
+/* hook */
+.hook{background:radial-gradient(1200px 800px at 18% 90%,rgba(255,138,61,.16),transparent 60%),radial-gradient(1000px 700px at 90% 10%,rgba(139,108,255,.18),transparent 60%),var(--bg)}
+.hook-bg{position:absolute;left:360px;top:140px;width:1200px;height:800px;filter:blur(10px)}
+.hook-glow{position:absolute;inset:0;background:radial-gradient(900px 600px at 50% 55%,transparent 20%,var(--bg) 85%)}
+.hook-group{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.hk-idea{font-size:300px;font-weight:800;line-height:.95;letter-spacing:-.02em;color:var(--ink)}
+.hk-arrow{position:relative;width:60px;height:120px;display:block;margin:4px 0 22px}
+.hk-arrow i{position:absolute;left:27px;top:0;width:6px;height:100px;background:var(--teal);transform-origin:50% 0;border-radius:3px}
+.hk-arrow u{position:absolute;left:12px;top:70px;width:36px;height:36px;border-right:6px solid var(--teal);border-bottom:6px solid var(--teal);transform:rotate(45deg) scale(.8);text-decoration:none}
+.hk-work{font-size:158px;font-weight:800;line-height:1;letter-spacing:-.01em;background:linear-gradient(90deg,var(--teal),#7ff5e0 50%,var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;padding:0 12px}
+.hk-bar{width:1100px;height:10px;margin-top:14px;background:linear-gradient(90deg,var(--ember),var(--teal));transform-origin:0 50%;border-radius:5px}
+
+/* title cards */
+.card{background:var(--bg)}
+.card-bg{position:absolute;inset:0;background:radial-gradient(900px 700px at 15% 100%,rgba(46,230,197,.14),transparent 60%),radial-gradient(900px 700px at 100% 0%,rgba(139,108,255,.2),transparent 60%)}
+.card-num{position:absolute;right:90px;bottom:-60px;font-family:"HF Mono",monospace;font-weight:700;font-size:520px;line-height:1;color:rgba(255,255,255,.055)}
+.card-text{z-index:6;position:absolute;left:150px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;gap:34px}
+.card-title{font-size:230px;font-weight:800;line-height:.92;letter-spacing:-.015em;color:var(--ink)}
+.card-title .tl{display:block;overflow:visible}
+.card-title .tw{display:inline-block}
+.card-tag{font-family:"HF Mono",monospace;font-weight:700;font-size:38px;letter-spacing:.2em;color:var(--teal);display:flex;align-items:center;gap:20px}
+.card-tag b,.cap-label b{display:block;width:14px;height:14px;background:var(--ember);transform:rotate(45deg)}
+.wipe{position:absolute;inset:0;background:linear-gradient(100deg,#6b300e,#0c5f56 55%,#3d2f8c);border-right:16px solid var(--teal);z-index:5}
+
+/* ui scenes */
+.ui{background:radial-gradient(1400px 900px at 50% 40%,#0b1424,var(--bg))}
+.stage{position:absolute;inset:0;overflow:hidden}
+.cam{position:absolute;left:0;top:0;transform-origin:0 0;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 40px 120px rgba(0,0,0,.6)}
+.cam img{display:block}
+.ring{position:absolute;border-style:solid;border-color:var(--teal);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 24px rgba(46,230,197,.75),inset 0 0 14px rgba(46,230,197,.35);pointer-events:none}
+.dimrect{position:absolute;background:rgba(5,7,13,.93)}
+.cap{position:absolute;max-width:1100px;padding:26px 38px 30px 34px;background:rgba(5,9,18,.88);border:1px solid rgba(255,255,255,.12);border-left:6px solid var(--teal);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.cap-label{font-family:"HF Mono",monospace;font-weight:700;font-size:26px;letter-spacing:.22em;color:var(--teal);display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.cap-label b{width:12px;height:12px}
+.cap-line{font-size:56px;font-weight:700;line-height:1.1;letter-spacing:-.005em;color:var(--ink)}
+
+/* outro */
+.outro{background:radial-gradient(1200px 800px at 50% 40%,#0c1424,var(--bg))}
+.out-glow{position:absolute;left:460px;top:-90px;width:1000px;height:1000px;border-radius:50%;background:radial-gradient(circle,rgba(255,138,61,.35),rgba(139,108,255,.14) 45%,transparent 70%)}
+.out-logo{position:absolute;left:530px;top:-70px;width:860px;height:860px;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 46%,transparent 68%);mask-image:radial-gradient(circle at 50% 50%,#000 46%,transparent 68%)}
+.out-tag{position:absolute;left:0;right:0;top:660px;text-align:center;font-size:76px;font-weight:700;letter-spacing:-.005em}
+.out-tag em{font-style:normal;color:var(--teal)}
+.out-cta{position:absolute;left:50%;top:810px;margin-left:-520px;width:1040px;height:130px;display:flex;align-items:center;justify-content:center;border-radius:70px;background:linear-gradient(90deg,var(--teal),#7ff5e0);color:#03130f;font-size:64px;font-weight:800;letter-spacing:-.005em;box-shadow:0 0 80px rgba(46,230,197,.4)}
+.flash{position:absolute;inset:0;background:#fff;opacity:0}
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="60" data-width="1920" data-height="1080">
+
+    <section class="clip hook" id="hook" data-start="0" data-duration="4.64" data-track-index="1">
+      <img class="hook-bg" id="hookbg" src="assets/img/B.png" width="1200" height="800" alt="" />
+      <div class="hook-glow"></div>
+      <div class="hook-group" id="hkgrp">
+        <div class="hk-idea" id="hkidea">IDEA</div>
+        <div class="hk-arrow" id="hkarrow"><i></i><u></u></div>
+        <div class="hk-work" id="hkwork">WORKING PROJECT</div>
+        <div class="hk-bar" id="hkbar"></div>
+      </div>
+    </section>
+    <section class="clip card" id="card0" data-start="4.64" data-duration="1.09" data-track-index="1">
+      <div class="card-bg"></div>
+      <div class="card-num">00</div>
+      <div class="card-text">
+        <div class="card-title" id="ct0"><span class="tl"><span class="tw tw0">MEET</span></span><span class="tl"><span class="tw tw0">HEDES</span> <span class="tw tw0">STUDIO</span></span></div>
+        <div class="card-tag" id="cg0"><b></b>LOCAL CREATIVE WORKSPACE</div>
+      </div>
+      <div class="wipe" id="wipe0"></div>
+    </section>
+    <section class="clip ui" id="ui0" data-start="5.73" data-duration="4.65" data-track-index="2">
+      <div class="stage">
+        <div class="cam" id="cam0" style="width:1200px;height:800px">
+          <img src="assets/img/B.png" width="1200" height="800" alt="HEDES Studio screenshot" />
+          
+        </div>
+      </div>
+      <div class="cap" id="cap0" style="left:110px;bottom:80px">
+        <div class="cap-label"><b></b>WORKSPACE</div>
+        <div class="cap-line">Chat, code, preview and terminal. One window.</div>
+      </div>
+    </section>
+    <section class="clip card" id="card1" data-start="10.38" data-duration="1.09" data-track-index="1">
+      <div class="card-bg"></div>
+      <div class="card-num">01</div>
+      <div class="card-text">
+        <div class="card-title" id="ct1"><span class="tl"><span class="tw tw1">AI</span> <span class="tw tw1">CHAT</span></span></div>
+        <div class="card-tag" id="cg1"><b></b>ASSISTANT · PROJECT CONTEXT</div>
+      </div>
+      <div class="wipe" id="wipe1"></div>
+    </section>
+    <section class="clip ui" id="ui1" data-start="11.47" data-duration="4.35" data-track-index="2">
+      <div class="stage">
+        <div class="cam" id="cam1" style="width:1608px;height:393px">
+          <img src="assets/img/A.png" width="1608" height="393" alt="HEDES Studio screenshot" />
+          <div class="ring" id="r1_0" style="left:229px;top:70px;width:96px;height:20px;border-width:1.6px;border-radius:6px"></div><div class="ring" id="r1_1" style="left:12px;top:246px;width:316px;height:108px;border-width:1.6px;border-radius:6px"></div>
+        </div>
+      </div>
+      <div class="cap" id="cap1" style="left:1040px;top:250px;width:780px">
+        <div class="cap-label"><b></b>AI CHAT</div>
+        <div class="cap-line">Describe it. Hedes builds it, with your project in context.</div>
+      </div>
+    </section>
+    <section class="clip card" id="card2" data-start="15.82" data-duration="1.09" data-track-index="1">
+      <div class="card-bg"></div>
+      <div class="card-num">02</div>
+      <div class="card-text">
+        <div class="card-title" id="ct2"><span class="tl"><span class="tw tw2">100</span> <span class="tw tw2">BOTS</span></span></div>
+        <div class="card-tag" id="cg2"><b></b>MULTI-AGENT WORKFLOWS</div>
+      </div>
+      <div class="wipe" id="wipe2"></div>
+    </section>
+    <section class="clip ui" id="ui2" data-start="16.91" data-duration="4.37" data-track-index="2">
+      <div class="stage">
+        <div class="cam" id="cam2" style="width:1200px;height:800px">
+          <img src="assets/img/B.png" width="1200" height="800" alt="HEDES Studio screenshot" />
+          <div class="ring" id="r2_0" style="left:207px;top:601px;width:120px;height:52px;border-width:1.4px;border-radius:6px"></div><div class="ring" id="r2_1" style="left:12px;top:613px;width:195px;height:28px;border-width:1.4px;border-radius:6px"></div>
+        </div>
+      </div>
+      <div class="cap" id="cap2" style="left:1130px;top:170px;width:690px">
+        <div class="cap-label"><b></b>MULTI-AGENT</div>
+        <div class="cap-line">One switch puts 100 bots to work on your task.</div>
+      </div>
+    </section>
+    <section class="clip card" id="card3" data-start="21.28" data-duration="1.09" data-track-index="1">
+      <div class="card-bg"></div>
+      <div class="card-num">03</div>
+      <div class="card-text">
+        <div class="card-title" id="ct3"><span class="tl"><span class="tw tw3">LIVE</span> <span class="tw tw3">PREVIEW</span></span></div>
+        <div class="card-tag" id="cg3"><b></b>LOCAL · 127.0.0.1</div>
+      </div>
+      <div class="wipe" id="wipe3"></div>
+    </section>
+    <section class="clip ui" id="ui3" data-start="22.37" data-duration="4.37" data-track-index="2">
+      <div class="stage">
+        <div class="cam" id="cam3" style="width:1200px;height:800px">
+          <img src="assets/img/B.png" width="1200" height="800" alt="HEDES Studio screenshot" />
+          <div class="ring" id="r3_0" style="left:394px;top:54px;width:340px;height:28px;border-width:1.2px;border-radius:6px"></div>
+        </div>
+      </div>
+      <div class="cap" id="cap3" style="left:110px;bottom:80px">
+        <div class="cap-label"><b></b>LIVE PREVIEW</div>
+        <div class="cap-line">See your website running, right next to your chat.</div>
+      </div>
+    </section>
+    <section class="clip card" id="card4" data-start="26.74" data-duration="1.09" data-track-index="1">
+      <div class="card-bg"></div>
+      <div class="card-num">04</div>
+      <div class="card-text">
+        <div class="card-title" id="ct4"><span class="tl"><span class="tw tw4">TERMINAL</span></span></div>
+        <div class="card-tag" id="cg4"><b></b>POWERSHELL · CMD</div>
+      </div>
+      <div class="wipe" id="wipe4"></div>
+    </section>
+    <section class="clip ui" id="ui4" data-start="27.83" data-duration="4.36" data-track-index="2">
+      <div class="stage">
+        <div class="cam" id="cam4" style="width:1200px;height:800px">
+          <img src="assets/img/B.png" width="1200" height="800" alt="HEDES Studio screenshot" />
+          <div class="ring" id="r4_0" style="left:346px;top:553px;width:272px;height:22px;border-width:1.4px;border-radius:6px"></div>
+        </div>
+      </div>
+      <div class="cap" id="cap4" style="left:110px;bottom:80px">
+        <div class="cap-label"><b></b>TERMINAL</div>
+        <div class="cap-line">Run commands without leaving the app.</div>
+      </div>
+    </section>
+    <section class="clip card" id="card5" data-start="32.19" data-duration="1.09" data-track-index="1">
+      <div class="card-bg"></div>
+      <div class="card-num">05</div>
+      <div class="card-text">
+        <div class="card-title" id="ct5"><span class="tl"><span class="tw tw5">YOUR</span> <span class="tw tw5">LAYOUT</span></span></div>
+        <div class="card-tag" id="cg5"><b></b>EDITOR · PREVIEW · SPLIT VIEW · TERMINAL</div>
+      </div>
+      <div class="wipe" id="wipe5"></div>
+    </section>
+    <section class="clip ui" id="ui5" data-start="33.28" data-duration="4.37" data-track-index="2">
+      <div class="stage">
+        <div class="cam" id="cam5" style="width:1608px;height:393px">
+          <img src="assets/img/A.png" width="1608" height="393" alt="HEDES Studio screenshot" />
+          <div class="ring" id="hop5" style="left:478px;top:10px;width:90px;height:36px;border-width:1.2px;border-radius:6px"></div>
+        </div>
+      </div>
+      <div class="cap" id="cap5" style="left:110px;bottom:80px">
+        <div class="cap-label"><b></b>FLEXIBLE VIEWS</div>
+        <div class="cap-line">Code, preview, or both side by side.</div>
+      </div>
+    </section>
+    <section class="clip card" id="card6" data-start="37.65" data-duration="1.09" data-track-index="1">
+      <div class="card-bg"></div>
+      <div class="card-num">06</div>
+      <div class="card-text">
+        <div class="card-title" id="ct6"><span class="tl"><span class="tw tw6">HISTORY</span></span></div>
+        <div class="card-tag" id="cg6"><b></b>FILES · HISTORY · ACTIVITY</div>
+      </div>
+      <div class="wipe" id="wipe6"></div>
+    </section>
+    <section class="clip ui" id="ui6" data-start="38.74" data-duration="4.37" data-track-index="2">
+      <div class="stage">
+        <div class="cam" id="cam6" style="width:1200px;height:800px">
+          <img src="assets/img/B.png" width="1200" height="800" alt="HEDES Studio screenshot" />
+          <div class="ring" id="r6_0" style="left:928px;top:228px;width:264px;height:34px;border-width:1.2px;border-radius:6px"></div><div class="ring" id="r6_1" style="left:38px;top:139px;width:180px;height:26px;border-width:1.2px;border-radius:6px"></div><div class="dimrect" id="dim6" style="left:344px;top:50px;width:573px;height:470px"></div>
+        </div>
+      </div>
+      <div class="cap" id="cap6" style="left:110px;bottom:80px">
+        <div class="cap-label"><b></b>PERSISTENT PROJECTS</div>
+        <div class="cap-line">Your files and history are saved with the project.</div>
+      </div>
+    </section>
+    <section class="clip card" id="card7" data-start="43.11" data-duration="1.09" data-track-index="1">
+      <div class="card-bg"></div>
+      <div class="card-num">07</div>
+      <div class="card-text">
+        <div class="card-title" id="ct7"><span class="tl"><span class="tw tw7">VOICE</span> <span class="tw tw7">+</span> <span class="tw tw7">SHIP</span></span></div>
+        <div class="card-tag" id="cg7"><b></b>VOICE · IMPORT · EXPORT ZIP</div>
+      </div>
+      <div class="wipe" id="wipe7"></div>
+    </section>
+    <section class="clip ui" id="ui7" data-start="44.2" data-duration="4.35" data-track-index="2">
+      <div class="stage">
+        <div class="cam" id="cam7" style="width:1608px;height:393px">
+          <img src="assets/img/A.png" width="1608" height="393" alt="HEDES Studio screenshot" />
+          <div class="ring" id="r7_0" style="left:901px;top:10px;width:88px;height:36px;border-width:1.1px;border-radius:6px"></div><div class="ring" id="r7_1" style="left:1204px;top:10px;width:132px;height:36px;border-width:1.1px;border-radius:6px"></div>
+        </div>
+      </div>
+      <div class="cap" id="cap7" style="left:110px;bottom:80px">
+        <div class="cap-label"><b></b>VOICE & PROJECTS</div>
+        <div class="cap-line">Talk to it. Import projects. Export a ZIP when you're done.</div>
+      </div>
+    </section>
+    <section class="clip card" id="card8" data-start="48.55" data-duration="1.09" data-track-index="1">
+      <div class="card-bg"></div>
+      <div class="card-num">08</div>
+      <div class="card-text">
+        <div class="card-title" id="ct8"><span class="tl"><span class="tw tw8">MEMORY</span></span><span class="tl"><span class="tw tw8">SKILLS</span> <span class="tw tw8">+</span> <span class="tw tw8">MCP</span></span></div>
+        <div class="card-tag" id="cg8"><b></b>PLUGINS · TOOLS</div>
+      </div>
+      <div class="wipe" id="wipe8"></div>
+    </section>
+    <section class="clip ui" id="ui8" data-start="49.64" data-duration="4.38" data-track-index="2">
+      <div class="stage">
+        <div class="cam" id="cam8" style="width:1200px;height:800px">
+          <img src="assets/img/B.png" width="1200" height="800" alt="HEDES Studio screenshot" />
+          <div class="ring" id="r8_0" style="left:1034px;top:777px;width:160px;height:22px;border-width:1.3px;border-radius:6px"></div>
+        </div>
+      </div>
+      <div class="cap" id="cap8" style="left:110px;bottom:80px">
+        <div class="cap-label"><b></b>BUILT-IN POWER</div>
+        <div class="cap-line">Memory, skills, plugins and MCP tools. Built right in.</div>
+      </div>
+    </section>
+    <section class="clip outro" id="outro" data-start="54.02" data-duration="5.98" data-track-index="1">
+      <div class="out-glow" id="outglow"></div>
+      <img class="out-logo" id="outlogo" src="assets/img/logo.png" width="860" height="860" alt="HEDES logo" />
+      <div class="out-tag" id="outtag">From idea to <em>working project.</em></div>
+      <div class="out-cta" id="outcta">Build your next idea with HEDES.</div>
+      <div class="flash" id="flash"></div>
+    </section>
+<audio id="music" data-start="0" data-duration="60" data-volume="0.62" data-fade-out="2.5" src="assets/audio/music.mp3"></audio>
+<audio id="sfx1" data-start="4.7" data-duration="0.11" data-volume="0.55" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx2" data-start="5.95" data-duration="0.01" data-volume="0.5" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx3" data-start="10.44" data-duration="0.11" data-volume="0.55" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx4" data-start="11.69" data-duration="0.01" data-volume="0.5" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx5" data-start="12.07" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx6" data-start="13.97" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx7" data-start="15.88" data-duration="0.11" data-volume="0.55" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx8" data-start="17.13" data-duration="0.01" data-volume="0.5" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx9" data-start="17.91" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx10" data-start="19.51" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx11" data-start="21.34" data-duration="0.11" data-volume="0.55" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx12" data-start="22.59" data-duration="0.01" data-volume="0.5" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx13" data-start="25.87" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx14" data-start="26.8" data-duration="0.11" data-volume="0.55" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx15" data-start="28.05" data-duration="0.01" data-volume="0.5" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx16" data-start="28.73" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx17" data-start="32.25" data-duration="0.11" data-volume="0.55" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx18" data-start="33.5" data-duration="0.01" data-volume="0.5" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx19" data-start="34.18" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx20" data-start="34.73" data-duration="0.01" data-volume="0.45" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx21" data-start="35.28" data-duration="0.01" data-volume="0.45" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx22" data-start="35.83" data-duration="0.01" data-volume="0.45" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx23" data-start="37.71" data-duration="0.11" data-volume="0.55" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx24" data-start="38.96" data-duration="0.01" data-volume="0.5" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx25" data-start="39.54" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx26" data-start="41.74" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx27" data-start="43.17" data-duration="0.11" data-volume="0.55" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx28" data-start="44.42" data-duration="0.01" data-volume="0.5" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx29" data-start="45" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx30" data-start="47.4" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx31" data-start="48.61" data-duration="0.11" data-volume="0.55" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx32" data-start="49.86" data-duration="0.01" data-volume="0.5" src="assets/audio/click_003.mp3"></audio>
+<audio id="sfx33" data-start="50.54" data-duration="0.6" data-volume="0.28" src="assets/audio/switch_002.mp3"></audio>
+<audio id="sfx34" data-start="0.27" data-duration="0.11" data-volume="0.7" src="assets/audio/impactGeneric_light_001.mp3"></audio>
+<audio id="sfx35" data-start="2.46" data-duration="0.13" data-volume="0.6" src="assets/audio/drop_001.mp3"></audio>
+<audio id="sfx36" data-start="54.02" data-duration="1.48" data-volume="0.8" src="assets/audio/impactBell_heavy_000.mp3"></audio>
+<audio id="sfx37" data-start="56.22" data-duration="0.01" data-volume="0.6" src="assets/audio/click_003.mp3"></audio>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+
+  // hook
+  tl.fromTo("#hookbg", {scale:2.0, opacity:0.0}, {scale:2.3, opacity:0.2, duration:4.64, ease:"none"}, 0);
+  tl.fromTo("#hkidea", {scale:1.4, opacity:0, y:30}, {scale:1, opacity:1, y:0, duration:0.28, ease:"expo.out"}, 0.27); // beat-locked: 0.27s (strong cue 0.267)
+  tl.fromTo("#hkgrp", {y:130}, {y:0, duration:0.55, ease:"power2.inOut"}, 1.9);
+  tl.fromTo("#hkarrow", {opacity:0}, {opacity:1, duration:0.01}, 1.9);
+  tl.fromTo("#hkarrow i", {scaleY:0}, {scaleY:1, duration:0.4, ease:"power2.out"}, 1.9);
+  tl.fromTo("#hkarrow u", {opacity:0, y:-20}, {opacity:1, y:0, duration:0.2, ease:"power2.out"}, 2.25);
+  tl.fromTo("#hkwork", {scale:1.25, opacity:0, y:40}, {scale:1, opacity:1, y:0, duration:0.3, ease:"expo.out"}, 2.46);
+  tl.fromTo("#hkbar", {scaleX:0}, {scaleX:1, duration:0.5, ease:"power3.out"}, 3.55); // beat-locked: 3.55s (strong cue 3.553)
+  tl.to("#hkwork", {scale:1.035, duration:0.5, ease:"sine.inOut"}, 3.55);
+
+  // card 0
+  tl.fromTo("#wipe0", {xPercent:-105}, {xPercent:105, duration:0.42, ease:"power3.inOut"}, 4.64);
+  tl.fromTo(".tw0", {y:90, opacity:0}, {y:0, opacity:1, duration:0.34, ease:"expo.out", stagger:0.07}, 4.78);
+  tl.fromTo("#cg0", {x:-30, opacity:0}, {x:0, opacity:1, duration:0.35, ease:"power3.out"}, 5.06);
+  tl.fromTo("#card0 .card-num", {opacity:0, x:60}, {opacity:1, x:0, duration:0.5, ease:"power3.out"}, 4.74);
+  // ui 0
+  tl.set("#cam0", {x:390,y:20,scale:0.95}, 5.73);
+  tl.fromTo("#cam0", {x:390,y:20,scale:0.95}, {...{x:132,y:-15,scale:1.38}, duration:1.5, ease:"power3.out"}, 5.73);
+  tl.fromTo("#cam0", {x:132,y:-15,scale:1.38}, {...{x:180,y:-60,scale:1.5}, duration:3.15, ease:"none"}, 7.23);
+  tl.fromTo("#cap0", {y:40, opacity:0}, {y:0, opacity:1, duration:0.45, ease:"power3.out"}, 5.93);
+  // card 1
+  tl.fromTo("#wipe1", {xPercent:-105}, {xPercent:105, duration:0.42, ease:"power3.inOut"}, 10.38);
+  tl.fromTo(".tw1", {y:90, opacity:0}, {y:0, opacity:1, duration:0.34, ease:"expo.out", stagger:0.07}, 10.52);
+  tl.fromTo("#cg1", {x:-30, opacity:0}, {x:0, opacity:1, duration:0.35, ease:"power3.out"}, 10.8);
+  tl.fromTo("#card1 .card-num", {opacity:0, x:60}, {opacity:1, x:0, duration:0.5, ease:"power3.out"}, 10.48);
+  // ui 1
+  tl.set("#cam1", {x:288,y:56,scale:1.6}, 11.47);
+  tl.fromTo("#cam1", {x:288,y:56,scale:1.6}, {...{x:220,y:-30,scale:2}, duration:1.2, ease:"power3.out"}, 11.47);
+  tl.fromTo("#cam1", {x:220,y:-30,scale:2}, {...{x:220,y:-30,scale:2}, duration:1.3, ease:"power2.inOut"}, 12.67);
+  tl.fromTo("#cam1", {x:220,y:-30,scale:2}, {...{x:152,y:-276,scale:2.4}, duration:1.2, ease:"power2.inOut"}, 13.97);
+  tl.fromTo("#cam1", {x:152,y:-276,scale:2.4}, {...{x:135,y:-305,scale:2.5}, duration:0.65, ease:"none"}, 15.17);
+  tl.fromTo("#cap1", {y:40, opacity:0}, {y:0, opacity:1, duration:0.45, ease:"power3.out"}, 11.67);
+  tl.fromTo("#r1_0", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 12.07);
+  tl.to("#r1_0", {opacity:0, duration:0.25, ease:"power1.in"}, 13.77);
+  tl.fromTo("#r1_1", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 13.97);
+  // card 2
+  tl.fromTo("#wipe2", {xPercent:-105}, {xPercent:105, duration:0.42, ease:"power3.inOut"}, 15.82);
+  tl.fromTo(".tw2", {y:90, opacity:0}, {y:0, opacity:1, duration:0.34, ease:"expo.out", stagger:0.07}, 15.96);
+  tl.fromTo("#cg2", {x:-30, opacity:0}, {x:0, opacity:1, duration:0.35, ease:"power3.out"}, 16.24);
+  tl.fromTo("#card2 .card-num", {opacity:0, x:60}, {opacity:1, x:0, duration:0.5, ease:"power3.out"}, 15.92);
+  // ui 2
+  tl.set("#cam2", {x:209,y:-1207,scale:2.3}, 16.91);
+  tl.fromTo("#cam2", {x:209,y:-1207,scale:2.3}, {...{x:90,y:-1690,scale:3}, duration:1.3, ease:"power3.out"}, 16.91);
+  tl.fromTo("#cam2", {x:90,y:-1690,scale:3}, {...{x:56,y:-1828,scale:3.2}, duration:3.07, ease:"none"}, 18.21);
+  tl.fromTo("#cap2", {y:40, opacity:0}, {y:0, opacity:1, duration:0.45, ease:"power3.out"}, 17.11);
+  tl.fromTo("#r2_0", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 17.91);
+  tl.to("#r2_0", {opacity:0, duration:0.25, ease:"power1.in"}, 19.51);
+  tl.fromTo("#r2_1", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 19.51);
+  // card 3
+  tl.fromTo("#wipe3", {xPercent:-105}, {xPercent:105, duration:0.42, ease:"power3.inOut"}, 21.28);
+  tl.fromTo(".tw3", {y:90, opacity:0}, {y:0, opacity:1, duration:0.34, ease:"expo.out", stagger:0.07}, 21.42);
+  tl.fromTo("#cg3", {x:-30, opacity:0}, {x:0, opacity:1, duration:0.35, ease:"power3.out"}, 21.7);
+  tl.fromTo("#card3 .card-num", {opacity:0, x:60}, {opacity:1, x:0, duration:0.5, ease:"power3.out"}, 21.38);
+  // ui 3
+  tl.set("#cam3", {x:-48,y:-46,scale:1.6}, 22.37);
+  tl.fromTo("#cam3", {x:-48,y:-46,scale:1.6}, {...{x:-268.5,y:-145.75,scale:1.95}, duration:1.3, ease:"power3.out"}, 22.37);
+  tl.fromTo("#cam3", {x:-268.5,y:-145.75,scale:1.95}, {...{x:-268.5,y:-145.75,scale:1.95}, duration:1.3, ease:"power2.inOut"}, 23.67);
+  tl.fromTo("#cam3", {x:-268.5,y:-145.75,scale:1.95}, {...{x:-1140,y:-120,scale:3}, duration:1.1, ease:"power2.inOut"}, 24.97);
+  tl.fromTo("#cam3", {x:-1140,y:-120,scale:3}, {...{x:-1210,y:-135,scale:3.1}, duration:0.67, ease:"none"}, 26.07);
+  tl.fromTo("#cap3", {y:40, opacity:0}, {y:0, opacity:1, duration:0.45, ease:"power3.out"}, 22.57);
+  tl.fromTo("#r3_0", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 25.87);
+  // card 4
+  tl.fromTo("#wipe4", {xPercent:-105}, {xPercent:105, duration:0.42, ease:"power3.inOut"}, 26.74);
+  tl.fromTo(".tw4", {y:90, opacity:0}, {y:0, opacity:1, duration:0.34, ease:"expo.out", stagger:0.07}, 26.88);
+  tl.fromTo("#cg4", {x:-30, opacity:0}, {x:0, opacity:1, duration:0.35, ease:"power3.out"}, 27.16);
+  tl.fromTo("#card4 .card-num", {opacity:0, x:60}, {opacity:1, x:0, duration:0.5, ease:"power3.out"}, 26.84);
+  // ui 4
+  tl.set("#cam4", {x:-237,y:-845.5,scale:1.9}, 27.83);
+  tl.fromTo("#cam4", {x:-237,y:-845.5,scale:1.9}, {...{x:-552,y:-1168,scale:2.4}, duration:1.3, ease:"power3.out"}, 27.83);
+  tl.fromTo("#cam4", {x:-552,y:-1168,scale:2.4}, {...{x:-832,y:-1528,scale:3.2}, duration:1.5, ease:"power2.inOut"}, 29.13);
+  tl.fromTo("#cam4", {x:-832,y:-1528,scale:3.2}, {...{x:-888,y:-1587,scale:3.3}, duration:1.56, ease:"none"}, 30.63);
+  tl.fromTo("#cap4", {y:40, opacity:0}, {y:0, opacity:1, duration:0.45, ease:"power3.out"}, 28.03);
+  tl.fromTo("#r4_0", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 28.73);
+  tl.to("#r4_0", {opacity:0, duration:0.25, ease:"power1.in"}, 30.53);
+  // card 5
+  tl.fromTo("#wipe5", {xPercent:-105}, {xPercent:105, duration:0.42, ease:"power3.inOut"}, 32.19);
+  tl.fromTo(".tw5", {y:90, opacity:0}, {y:0, opacity:1, duration:0.34, ease:"expo.out", stagger:0.07}, 32.33);
+  tl.fromTo("#cg5", {x:-30, opacity:0}, {x:0, opacity:1, duration:0.35, ease:"power3.out"}, 32.61);
+  tl.fromTo("#card5 .card-num", {opacity:0, x:60}, {opacity:1, x:0, duration:0.5, ease:"power3.out"}, 32.29);
+  // ui 5
+  tl.set("#cam5", {x:-795,y:257.2,scale:2.6}, 33.28);
+  tl.fromTo("#cam5", {x:-795,y:257.2,scale:2.6}, {...{x:-1267.5,y:237.6,scale:3.3}, duration:1, ease:"power3.out"}, 33.28);
+  tl.fromTo("#cam5", {x:-1267.5,y:237.6,scale:3.3}, {...{x:-1335,y:234.8,scale:3.4}, duration:3.37, ease:"none"}, 34.28);
+  tl.fromTo("#cap5", {y:40, opacity:0}, {y:0, opacity:1, duration:0.45, ease:"power3.out"}, 33.48);
+  tl.fromTo("#hop5", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 34.18);
+  tl.to("#hop5", {x:92, width:85, duration:0.28, ease:"power3.inOut"}, 34.69);
+  tl.to("#hop5", {x:186, width:100, duration:0.28, ease:"power3.inOut"}, 35.24);
+  tl.to("#hop5", {x:295, width:98, duration:0.28, ease:"power3.inOut"}, 35.79);
+  // card 6
+  tl.fromTo("#wipe6", {xPercent:-105}, {xPercent:105, duration:0.42, ease:"power3.inOut"}, 37.65);
+  tl.fromTo(".tw6", {y:90, opacity:0}, {y:0, opacity:1, duration:0.34, ease:"expo.out", stagger:0.07}, 37.79);
+  tl.fromTo("#cg6", {x:-30, opacity:0}, {x:0, opacity:1, duration:0.35, ease:"power3.out"}, 38.07);
+  tl.fromTo("#card6 .card-num", {opacity:0, x:60}, {opacity:1, x:0, duration:0.5, ease:"power3.out"}, 37.75);
+  // ui 6
+  tl.set("#cam6", {x:-402,y:0,scale:1.7}, 38.74);
+  tl.fromTo("#cam6", {x:-402,y:0,scale:1.7}, {...{x:-1038,y:-120,scale:2.3}, duration:1.3, ease:"power3.out"}, 38.74);
+  tl.fromTo("#cam6", {x:-1038,y:-120,scale:2.3}, {...{x:328,y:-210,scale:3.6}, duration:1.4, ease:"power2.inOut"}, 40.04);
+  tl.fromTo("#cam6", {x:328,y:-210,scale:3.6}, {...{x:316,y:-225,scale:3.7}, duration:1.67, ease:"none"}, 41.44);
+  tl.fromTo("#cap6", {y:40, opacity:0}, {y:0, opacity:1, duration:0.45, ease:"power3.out"}, 38.94);
+  tl.fromTo("#r6_0", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 39.54);
+  tl.to("#r6_0", {opacity:0, duration:0.25, ease:"power1.in"}, 41.34);
+  tl.fromTo("#r6_1", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 41.74);
+  tl.fromTo("#dim6", {opacity:0}, {opacity:1, duration:0.5, ease:"power2.out"}, 38.74);
+  // card 7
+  tl.fromTo("#wipe7", {xPercent:-105}, {xPercent:105, duration:0.42, ease:"power3.inOut"}, 43.11);
+  tl.fromTo(".tw7", {y:90, opacity:0}, {y:0, opacity:1, duration:0.34, ease:"expo.out", stagger:0.07}, 43.25);
+  tl.fromTo("#cg7", {x:-30, opacity:0}, {x:0, opacity:1, duration:0.35, ease:"power3.out"}, 43.53);
+  tl.fromTo("#card7 .card-num", {opacity:0, x:60}, {opacity:1, x:0, duration:0.5, ease:"power3.out"}, 43.21);
+  // ui 7
+  tl.set("#cam7", {x:-2190,y:236,scale:3}, 44.2);
+  tl.fromTo("#cam7", {x:-2190,y:236,scale:3}, {...{x:-3135,y:210.8,scale:3.9}, duration:1.1, ease:"power3.out"}, 44.2);
+  tl.fromTo("#cam7", {x:-3135,y:210.8,scale:3.9}, {...{x:-4266,y:210.8,scale:3.9}, duration:1.6, ease:"power2.inOut"}, 45.3);
+  tl.fromTo("#cam7", {x:-4266,y:210.8,scale:3.9}, {...{x:-4400,y:208,scale:4}, duration:1.65, ease:"none"}, 46.9);
+  tl.fromTo("#cap7", {y:40, opacity:0}, {y:0, opacity:1, duration:0.45, ease:"power3.out"}, 44.4);
+  tl.fromTo("#r7_0", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 45);
+  tl.to("#r7_0", {opacity:0, duration:0.25, ease:"power1.in"}, 46.6);
+  tl.fromTo("#r7_1", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 47.4);
+  // card 8
+  tl.fromTo("#wipe8", {xPercent:-105}, {xPercent:105, duration:0.42, ease:"power3.inOut"}, 48.55);
+  tl.fromTo(".tw8", {y:90, opacity:0}, {y:0, opacity:1, duration:0.34, ease:"expo.out", stagger:0.07}, 48.69);
+  tl.fromTo("#cg8", {x:-30, opacity:0}, {x:0, opacity:1, duration:0.35, ease:"power3.out"}, 48.97);
+  tl.fromTo("#card8 .card-num", {opacity:0, x:60}, {opacity:1, x:0, duration:0.5, ease:"power3.out"}, 48.65);
+  // ui 8
+  tl.set("#cam8", {x:-2180,y:-2031,scale:3}, 49.64);
+  tl.fromTo("#cam8", {x:-2180,y:-2031,scale:3}, {...{x:-3452,y:-2975.4,scale:4.2}, duration:1.2, ease:"power3.out"}, 49.64);
+  tl.fromTo("#cam8", {x:-3452,y:-2975.4,scale:4.2}, {...{x:-1020,y:-1188,scale:2.2}, duration:1.8, ease:"power2.inOut"}, 50.84);
+  tl.fromTo("#cam8", {x:-1020,y:-1188,scale:2.2}, {...{x:-1110,y:-1257,scale:2.3}, duration:1.38, ease:"none"}, 52.64);
+  tl.fromTo("#cap8", {y:40, opacity:0}, {y:0, opacity:1, duration:0.45, ease:"power3.out"}, 49.84);
+  tl.fromTo("#r8_0", {opacity:0, scale:1.25}, {opacity:1, scale:1, duration:0.3, ease:"back.out(2)"}, 50.54);
+  tl.to("#r8_0", {opacity:0, duration:0.25, ease:"power1.in"}, 52.54);
+  // outro
+  tl.fromTo("#outglow", {opacity:0, scale:0.6}, {opacity:1, scale:1, duration:1.2, ease:"power3.out"}, 54.02);
+  tl.fromTo("#outlogo", {opacity:0, scale:0.82}, {opacity:1, scale:1, duration:0.7, ease:"expo.out"}, 54.02);
+  tl.to("#outlogo", {scale:1.05, duration:5.28, ease:"none"}, 54.74);
+  tl.fromTo("#flash", {opacity:0.55}, {opacity:0, duration:0.45, ease:"power2.out"}, 54.02);
+  tl.fromTo("#outtag", {y:36, opacity:0}, {y:0, opacity:1, duration:0.5, ease:"power3.out"}, 55.12);
+  tl.fromTo("#outcta", {y:30, opacity:0, scale:0.94}, {y:0, opacity:1, scale:1, duration:0.55, ease:"back.out(1.6)"}, 56.22);
+
+window.__timelines["main"] = tl;
+</script>
+</body>
+</html>

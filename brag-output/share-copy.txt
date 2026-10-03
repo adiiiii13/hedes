@@ -1,0 +1,7 @@
+HEDES Studio: from idea to working project.
+
+AI chat, 100-bot multi-agent mode, live preview, built-in terminal, project history, voice, and Memory / Skills / MCP, all in one desktop workspace.
+
+Build your next idea with HEDES.
+
+#HEDES #AIDev #DeveloperTools

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-01T19:07:38.414Z",
+  "timestamp": "2026-10-03T18:17:30.271Z",
   "environment": {
     "platform": "win32",
     "arch": "x64",
@@ -7,13 +7,13 @@
     "nodeVersion": "v24.14.1"
   },
   "metrics": {
-    "fileIndexingDurationMs": 11,
+    "fileIndexingDurationMs": 23,
     "tenThousandFilesSearchMatches": 200,
-    "fiftyThousandMessagesSerializationMs": 102,
+    "fiftyThousandMessagesSerializationMs": 177,
     "terminalOutputThroughputBytes": 8188900,
-    "terminalStreamingDurationMs": 56,
-    "hundredBotCouncilDurationMs": 23,
-    "firstUsefulReplyLatencyMs": 5,
+    "terminalStreamingDurationMs": 88,
+    "hundredBotCouncilDurationMs": 17,
+    "firstUsefulReplyLatencyMs": 8,
     "memoryRssDeltaMb": 59
   }
 }

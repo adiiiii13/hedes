@@ -1,6 +1,6 @@
 appId: in.bubblesort.hedes
 productName: Hedes Studio
-electronVersion: 33.4.11
+electronVersion: 44.5.1
 directories:
   buildResources: build
   output: dist
