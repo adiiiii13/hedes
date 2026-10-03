@@ -140,7 +140,7 @@ export const DiagnosticsSettings: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header and Controls */}
-      <div className="flex items-center justify-between pb-4 border-b border-white/10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
         <div>
           <h3 className="text-sm font-semibold text-white flex items-center gap-2">
             <Activity className="w-4 h-4 text-emerald-400" />
@@ -150,7 +150,7 @@ export const DiagnosticsSettings: React.FC = () => {
             Offline health telemetry, active process states, and sanitized error rings.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={copyDiagnosticSummary}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition-colors border border-white/10"

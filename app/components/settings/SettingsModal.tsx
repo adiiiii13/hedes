@@ -38,7 +38,7 @@ export const SettingsModal: React.FC = () => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -51,10 +51,10 @@ export const SettingsModal: React.FC = () => {
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="relative w-full max-w-5xl max-h-[92vh] rounded-3xl app-surface border border-white/10 shadow-[0_32px_100px_rgba(0,0,0,0.65)] flex flex-col overflow-hidden z-10"
+            className="relative w-full max-w-5xl max-h-[calc(100dvh-1rem)] sm:max-h-[92vh] rounded-2xl sm:rounded-3xl app-surface border border-white/10 shadow-[0_32px_100px_rgba(0,0,0,0.65)] flex flex-col overflow-hidden z-10"
           >
             {/* Modal Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 p-4 px-6 border-b border-white/10 app-background">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 sm:px-6 border-b border-white/10 app-background">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400">
                   <Settings className="w-4 h-4" />
@@ -66,7 +66,7 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               {/* Navigation Tabs Switcher */}
-              <div className="order-3 flex w-full items-center gap-1 p-1 bg-black/40 border border-white/5 rounded-2xl overflow-x-auto modern-scrollbar">
+              <div className="order-3 grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 p-1 bg-black/40 border border-white/5 rounded-2xl">
                 <button
                   type="button"
                   onClick={() => setActiveTab('llm')}
@@ -141,7 +141,7 @@ export const SettingsModal: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
               {activeTab === 'llm' && <LLMConfigurator />}
               {activeTab === 'terminal' && <TerminalSettings />}
               {activeTab === 'personas' && <PersonificationManager />}

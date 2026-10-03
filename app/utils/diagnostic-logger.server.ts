@@ -252,17 +252,18 @@ export async function getSanitizedLogExportPreview(): Promise<{
  */
 export async function getSystemDiagnosticReport(): Promise<DiagnosticReport> {
   const paths = getStoragePaths();
-  const mem = process.memoryUsage();
+  const nodeProcess = globalThis.process;
+  const mem = nodeProcess.memoryUsage();
 
   return {
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     runtime: {
       mode: getRuntimeMode(),
-      node: process.version,
-      platform: process.platform,
-      arch: process.arch,
-      uptimeSeconds: Math.floor(process.uptime()),
+      node: nodeProcess.version,
+      platform: nodeProcess.platform,
+      arch: nodeProcess.arch,
+      uptimeSeconds: Math.floor(nodeProcess.uptime()),
       memory: {
         rssMb: Math.round(mem.rss / 1024 / 1024),
         heapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),

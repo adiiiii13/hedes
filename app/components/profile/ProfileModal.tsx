@@ -130,11 +130,11 @@ export const ProfileModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-[#0e0e20] border border-[#2d2d55] rounded-2xl shadow-2xl shadow-purple-950/40 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-[#0e0e20] border border-[#2d2d55] rounded-xl sm:rounded-2xl shadow-2xl shadow-purple-950/40 overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-[#202040] flex items-center justify-between bg-gradient-to-r from-[#141430] via-[#161638] to-[#121228]">
-          <div className="flex items-center space-x-3">
+        <div className="px-4 sm:px-6 py-4 border-b border-[#202040] flex items-start justify-between gap-3 bg-gradient-to-r from-[#141430] via-[#161638] to-[#121228]">
+          <div className="flex items-center gap-3 min-w-0">
             <div
               style={{ backgroundColor: avatarColor }}
               className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 border border-white/20"
@@ -142,7 +142,7 @@ export const ProfileModal: React.FC = () => {
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-white flex flex-wrap items-center gap-2">
                 Human Profile & AI Perspective
                 <span className="text-[11px] font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">
                   Personalization
@@ -154,7 +154,7 @@ export const ProfileModal: React.FC = () => {
                   </span>
                 )}
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 mt-1">
                 Define your human context, worldview, and priorities so Hedes and the 100-Person Council understand you.
               </p>
             </div>
@@ -169,12 +169,12 @@ export const ProfileModal: React.FC = () => {
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
           {/* Top Hero: 100-Personification Swarm Chat Launch Banner */}
-          <div className="relative overflow-hidden rounded-xl p-5 border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-[#12122b] shadow-lg shadow-indigo-900/20">
-            <div className="flex items-start justify-between gap-4">
+          <div className="relative overflow-hidden rounded-xl p-4 border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-[#12122b]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-1">
-                <div className="flex items-center gap-2 text-indigo-300 font-semibold text-sm">
+                <div className="flex flex-wrap items-center gap-2 text-indigo-300 font-semibold text-sm">
                   <MessageSquare className="w-4 h-4 text-cyan-400" />
                   <span>100-Person Human Council Chat</span>
                   <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.2 rounded font-mono">
@@ -188,7 +188,7 @@ export const ProfileModal: React.FC = () => {
               <button
                 type="button"
                 onClick={handleOpen100Chat}
-                className="shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-medium text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/25 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+                className="shrink-0 self-start sm:self-auto px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-medium text-xs flex items-center gap-2 transition-colors cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
                 <span>Open 100-Person Chat</span>
@@ -199,7 +199,7 @@ export const ProfileModal: React.FC = () => {
           {/* Profile Form */}
           <form onSubmit={handleSave} className="space-y-5">
             {/* Live Identity Badge Preview & Avatar Theme */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#14142b]/60 border border-[#252545]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-[#14142b]/60 border border-[#252545]">
               <div className="flex items-center gap-3.5 min-w-0">
                 <div
                   style={{ backgroundColor: avatarColor }}
@@ -221,7 +221,7 @@ export const ProfileModal: React.FC = () => {
               </div>
 
               {/* Avatar Color Picker */}
-              <div className="flex items-center gap-1.5 shrink-0 pl-3 border-l border-[#252548]">
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:shrink-0 sm:pl-3 sm:border-l border-[#252548]">
                 <Palette className="w-3.5 h-3.5 text-slate-400 mr-1" />
                 {AVATAR_COLORS.map((c) => (
                   <button
@@ -340,8 +340,8 @@ export const ProfileModal: React.FC = () => {
             )}
 
             {/* Actions Bar */}
-            <div className="pt-3 flex items-center justify-between border-t border-[#202040]">
-              <div className="flex items-center gap-2">
+            <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-[#202040]">
+              <div className="flex flex-wrap items-center gap-1">
                 <button
                   type="button"
                   onClick={resetUserProfile}
@@ -374,7 +374,7 @@ export const ProfileModal: React.FC = () => {
                 </label>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between sm:justify-end gap-3">
                 {savedSuccess && (
                   <span className="text-xs text-emerald-400 flex items-center gap-1 animate-fadeIn">
                     <Check className="w-3.5 h-3.5" /> Saved & Synced
