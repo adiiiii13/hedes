@@ -42,10 +42,14 @@ interface HedesDB extends DBSchema {
     key: string;
     value: any;
   };
+  cloud_sync: {
+    key: string;
+    value: any;
+  };
 }
 
 const DB_NAME = 'hedes_studio_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<HedesDB>> | null = null;
 
@@ -71,11 +75,29 @@ export function getHedesDB(): Promise<IDBPDatabase<HedesDB>> {
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings');
         }
+        if (!db.objectStoreNames.contains('cloud_sync')) {
+          db.createObjectStore('cloud_sync');
+        }
       },
     });
   }
 
   return dbPromise!;
+}
+
+export async function getCloudSyncState<T>(key: string): Promise<T | undefined> {
+  const db = await getHedesDB();
+  return db.get('cloud_sync', key) as Promise<T | undefined>;
+}
+
+export async function setCloudSyncState<T>(key: string, value: T): Promise<void> {
+  const db = await getHedesDB();
+  await db.put('cloud_sync', value, key);
+}
+
+export async function removeCloudSyncState(key: string): Promise<void> {
+  const db = await getHedesDB();
+  await db.delete('cloud_sync', key);
 }
 
 export async function saveChat(chat: ChatRecord): Promise<void> {

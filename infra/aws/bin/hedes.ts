@@ -13,6 +13,7 @@ new HedesCloudStack(app, `Hedes-${stage}`, {
   stage,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
-    region: 'ap-south-1',
+    // AWS Free account projects in India are provisioned in Sydney.
+    region: process.env.HEDES_AWS_REGION ?? 'ap-southeast-2',
   },
 });

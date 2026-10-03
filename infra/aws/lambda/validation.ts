@@ -30,19 +30,20 @@ export function parseBody(event: APIGatewayProxyEventV2WithJWTAuthorizer, maxByt
   }
 }
 
-export function encodeCursor(cursor: { updatedAt: string; type: string; id: string }): string {
+export function encodeCursor(cursor: { updatedAt: string; type: string; id: string; key?: Record<string, unknown> }): string {
   return Buffer.from(JSON.stringify(cursor)).toString('base64url');
 }
 
-export function decodeCursor(value: string | undefined): { updatedAt: string; type: string; id: string } | null {
+export function decodeCursor(value: string | undefined): { updatedAt: string; type: string; id: string; key?: Record<string, unknown> } | null {
   if (!value) return null;
   if (value.length > 512) throw Object.assign(new Error('Invalid sync cursor'), { statusCode: 400 });
   try {
     const cursor = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as Record<string, unknown>;
     if (typeof cursor.updatedAt !== 'string' || !Number.isFinite(Date.parse(cursor.updatedAt))
       || typeof cursor.type !== 'string' || !recordTypes.includes(cursor.type as typeof recordTypes[number])
-      || typeof cursor.id !== 'string') throw new Error('invalid');
-    return cursor as { updatedAt: string; type: string; id: string };
+      || typeof cursor.id !== 'string'
+      || (cursor.key !== undefined && (!cursor.key || typeof cursor.key !== 'object' || Array.isArray(cursor.key)))) throw new Error('invalid');
+    return cursor as { updatedAt: string; type: string; id: string; key?: Record<string, unknown> };
   } catch {
     throw Object.assign(new Error('Invalid sync cursor'), { statusCode: 400 });
   }

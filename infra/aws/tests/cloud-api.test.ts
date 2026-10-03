@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { decodeCursor, encodeCursor, isSafeJson, isSafeProjectId, ownerId, parseBody, validateSafePath } from '../lambda/validation.js';
+import { tenantPartitionKey } from '../lambda/api-dynamodb.js';
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
-test('sync cursor preserves PostgreSQL microsecond timestamp precision', () => {
-  const cursor = { updatedAt: '2026-10-03 12:00:00.123456+00', type: 'chats', id: 'chat-1' };
+test('sync cursor preserves DynamoDB pagination key across devices', () => {
+  const cursor = { updatedAt: '2026-10-03T12:00:00.123Z', type: 'chats', id: 'chat-1', key: { PK: 'USER#user-1', SK: 'RECORD#chats#chat-1', GSI1PK: 'USER#user-1', GSI1SK: '2026-10-03T12:00:00.123Z#chats#chat-1' } };
   assert.deepEqual(decodeCursor(encodeCursor(cursor)), cursor);
 });
 
@@ -43,11 +43,10 @@ test('request body limits and verified Cognito subject are enforced', () => {
   assert.throws(() => parseBody({ ...event, body: 'x'.repeat(101) }, 100), /exceeds 256 KiB limit/);
 });
 
-test('API tenant row security is enabled and forced for every synced table', async () => {
-  const schema = await readFile(new URL('../lambda/schema.sql', import.meta.url), 'utf8');
-  for (const table of ['sync_records', 'sync_mutations', 'file_uploads', 'user_storage']) {
-    assert.match(schema, new RegExp(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`, 'i'));
-    assert.match(schema, new RegExp(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`, 'i'));
-    assert.match(schema, new RegExp(`CREATE POLICY ${table}_tenant[\\s\\S]*?current_setting\\('hedes.user_id', true\\)`, 'i'));
-  }
+test('DynamoDB tenant partition keys derive only from the verified Cognito subject', () => {
+  const event = { requestContext: { authorizer: { jwt: { claims: { sub: 'cognito-user-123' } } } } } as APIGatewayProxyEventV2WithJWTAuthorizer;
+  const verifiedOwner = ownerId(event);
+  assert.equal(verifiedOwner, 'cognito-user-123');
+  assert.equal(tenantPartitionKey(verifiedOwner!), 'USER#cognito-user-123');
+  assert.notEqual(tenantPartitionKey(verifiedOwner!), tenantPartitionKey('cognito-user-456'));
 });

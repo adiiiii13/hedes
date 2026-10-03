@@ -13,6 +13,7 @@ import { PluginSettings } from './PluginSettings';
 import { AppearanceSettings } from './AppearanceSettings';
 import { DiagnosticsSettings } from './DiagnosticsSettings';
 import { TasksSettings } from './TasksSettings';
+import { CloudSyncSettings } from './CloudSyncSettings';
 import {
   Key,
   Settings,
@@ -26,12 +27,13 @@ import {
   Palette,
   Activity,
   Clock,
+  Cloud,
   X,
 } from 'lucide-react';
 
 export const SettingsModal: React.FC = () => {
   const isOpen = useStore(isSettingsOpen);
-  const [activeTab, setActiveTab] = useState<'llm' | 'terminal' | 'personas' | 'storage' | 'memory' | 'mcp' | 'skills' | 'plugins' | 'appearance' | 'diagnostics' | 'tasks'>('llm');
+  const [activeTab, setActiveTab] = useState<'llm' | 'terminal' | 'personas' | 'storage' | 'memory' | 'mcp' | 'skills' | 'plugins' | 'appearance' | 'diagnostics' | 'tasks' | 'cloud'>('llm');
 
   return (
     <AnimatePresence>
@@ -119,6 +121,7 @@ export const SettingsModal: React.FC = () => {
                   <Database className="w-3.5 h-3.5" />
                   <span>Storage & Disk</span>
                 </button>
+                <button type="button" onClick={() => setActiveTab('cloud')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'cloud' ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-400/40' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><Cloud className="w-3.5 h-3.5" /><span>Cloud Sync</span></button>
                 <button type="button" onClick={() => setActiveTab('memory')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'memory' ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><BrainCircuit className="w-3.5 h-3.5" /><span>Memory</span></button>
                 <button type="button" onClick={() => setActiveTab('mcp')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'mcp' ? 'bg-cyan-600/30 text-cyan-200 border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><PlugZap className="w-3.5 h-3.5" /><span>MCP</span></button>
                 <button type="button" onClick={() => setActiveTab('skills')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${activeTab === 'skills' ? 'bg-violet-600/30 text-violet-200 border border-violet-500/40' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}><BookOpen className="w-3.5 h-3.5" /><span>Skills</span></button>
@@ -143,6 +146,7 @@ export const SettingsModal: React.FC = () => {
               {activeTab === 'terminal' && <TerminalSettings />}
               {activeTab === 'personas' && <PersonificationManager />}
               {activeTab === 'storage' && <StorageSettings />}
+              {activeTab === 'cloud' && <CloudSyncSettings />}
               {activeTab === 'memory' && <MemorySettings />}
               {activeTab === 'mcp' && <McpSettings />}
               {activeTab === 'skills' && <SkillSettings />}
